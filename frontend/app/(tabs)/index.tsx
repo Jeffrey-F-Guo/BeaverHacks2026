@@ -68,11 +68,12 @@ function ReelItem({ item, active, height }: ReelItemProps) {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const [paused, setPaused] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [isFastForwarding, setIsFastForwarding] = useState(false);
   const router = useRouter();
 
   const player = useVideoPlayer(item.video_url, (p) => {
     p.loop = true;
-    p.play();
   });
 
   useEffect(() => {
@@ -83,6 +84,29 @@ function ReelItem({ item, active, height }: ReelItemProps) {
     }
   }, [active, paused, player]);
 
+  useEffect(() => {
+    if (!active) return;
+    const id = setInterval(() => {
+      const dur = player.duration;
+      if (dur > 0) setProgress(player.currentTime / dur);
+    }, 100);
+    return () => clearInterval(id);
+  }, [active, player]);
+
+  const handleLongPress = () => {
+    player.playbackRate = 2;
+    player.play();
+    setIsFastForwarding(true);
+  };
+
+  const handlePressOut = () => {
+    if (!isFastForwarding) return;
+    player.playbackRate = 1;
+    setIsFastForwarding(false);
+    if (paused || !active) player.pause();
+    else player.play();
+  };
+
   return (
     <View style={[styles.reel, { height }]}>
       <VideoView
@@ -92,10 +116,13 @@ function ReelItem({ item, active, height }: ReelItemProps) {
         nativeControls={false}
       />
 
-      {/* Tap layer for play/pause */}
+      {/* Tap to pause/play; hold for 2× speed */}
       <Pressable
         style={StyleSheet.absoluteFillObject}
         onPress={() => setPaused((p) => !p)}
+        onLongPress={handleLongPress}
+        onPressOut={handlePressOut}
+        delayLongPress={200}
       />
 
       {/* Title chip */}
@@ -127,6 +154,18 @@ function ReelItem({ item, active, height }: ReelItemProps) {
           <Text style={styles.exploreText}>Explore Topic</Text>
         </Pressable>
       </View>
+
+      {/* Progress bar — sits just above the CTA */}
+      <View pointerEvents="none" style={styles.progressTrack}>
+        <View style={[styles.progressFill, { width: `${progress * 100}%` as any }]} />
+      </View>
+
+      {/* 2× speed badge — visible while holding */}
+      {isFastForwarding && (
+        <View pointerEvents="none" style={[styles.speedBadge, { top: insets.top + 12 }]}>
+          <Text style={styles.speedText}>2×</Text>
+        </View>
+      )}
 
       {/* Center play indicator when paused */}
       {paused && (
@@ -300,5 +339,34 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.18)',
+  },
+
+  progressTrack: {
+    position: 'absolute',
+    bottom: 52,
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+  },
+  progressFill: {
+    height: 2,
+    backgroundColor: '#fff',
+  },
+
+  speedBadge: {
+    position: 'absolute',
+    right: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  speedText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+    color: '#fff',
   },
 });
