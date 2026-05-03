@@ -1,8 +1,9 @@
 import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Colors } from '../../src/theme/colors';
 
-const ACTIVE_COLOR = '#5B6CFF';
-const INACTIVE_COLOR = 'rgba(255,255,255,0.5)';
+const ACTIVE_COLOR = Colors.PRIMARY;
+const INACTIVE_COLOR = Colors.OUTLINE;
 
 export default function TabsLayout() {
   return (
@@ -12,14 +13,13 @@ export default function TabsLayout() {
         tabBarActiveTintColor: ACTIVE_COLOR,
         tabBarInactiveTintColor: INACTIVE_COLOR,
         tabBarStyle: {
-          backgroundColor: '#000',
-          borderTopColor: 'rgba(255,255,255,0.08)',
+          backgroundColor: Colors.SURFACE_CONTAINER_LOWEST,
+          borderTopColor: Colors.SURFACE_CONTAINER_HIGH,
         },
         tabBarLabelStyle: {
-          fontFamily: 'Inter_600SemiBold',
+          fontFamily: 'Inter_500Medium',
           fontSize: 11,
-          letterSpacing: 1.6,
-          textTransform: 'uppercase',
+          letterSpacing: 0.5,
         },
       }}
     >
@@ -28,8 +28,47 @@ export default function TabsLayout() {
         options={{
           title: 'Feed',
           tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons
-              name={focused ? 'home' : 'home-outline'}
+            <MaterialCommunityIcons
+              name={focused ? 'play-circle' : 'play-circle-outline'}
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="topics"
+        options={{
+          title: 'Topics',
+          tabBarIcon: ({ color, size, focused }) => (
+            <MaterialCommunityIcons
+              name={focused ? 'home-variant' : 'home-variant-outline'}
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="research"
+        options={{
+          title: 'Research',
+          tabBarIcon: ({ color, size, focused }) => (
+            <MaterialCommunityIcons
+              name={focused ? 'flask' : 'flask-outline'}
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="videos"
+        options={{
+          title: 'Videos',
+          tabBarIcon: ({ color, size, focused }) => (
+            <MaterialCommunityIcons
+              name={focused ? 'film' : 'film-outline'}
               size={size}
               color={color}
             />
@@ -41,8 +80,8 @@ export default function TabsLayout() {
         options={{
           title: 'Search',
           tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons
-              name={focused ? 'search' : 'search-outline'}
+            <MaterialCommunityIcons
+              name={focused ? 'magnify' : 'magnify'}
               size={size}
               color={color}
             />

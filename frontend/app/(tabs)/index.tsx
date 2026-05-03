@@ -9,64 +9,54 @@ import {
   ListRenderItemInfo,
   LayoutChangeEvent,
   useWindowDimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import { useRouter } from 'expo-router';
+import { api, Topic } from '../../src/services/api';
+import { Colors } from '../../src/theme/colors';
 
-const SUPABASE_PREFIX =
-  'https://vjpyzcejomgjlcxjawgr.supabase.co/storage/v1/object/public/groundtruth/videos/open-source-vs-closed-source-llms';
-
-const CTA_BG = '#C7CFFE';
-const CTA_FG = '#1A1F40';
+const CTA_BG = Colors.PRIMARY_FIXED;
+const CTA_FG = Colors.ON_SURFACE;
 
 type Reel = {
   id: string;
+  topic_id: string;
   video_url: string;
   topic_title: string;
   description: string;
 };
 
-// TODO: replace with GET /reels fetch once endpoint is added.
-const REELS: Reel[] = [
-  {
-    id: '1',
-    video_url: `${SUPABASE_PREFIX}/short_00_origin.mp4`,
-    topic_title: 'Open vs. Closed Source LLMs',
-    description: 'The fork that defined a decade of AI development.',
-  },
-  {
-    id: '2',
-    video_url: `${SUPABASE_PREFIX}/short_01_key_players.mp4`,
-    topic_title: 'Open vs. Closed Source LLMs',
-    description: 'Three governments, two labs, and one open-source community.',
-  },
-  {
-    id: '3',
-    video_url: `${SUPABASE_PREFIX}/short_02_case_for_a.mp4`,
-    topic_title: 'Open vs. Closed Source LLMs',
-    description: 'A free flow of weights as the antidote to capture.',
-  },
-  {
-    id: '4',
-    video_url: `${SUPABASE_PREFIX}/short_03_case_for_b.mp4`,
-    topic_title: 'Open vs. Closed Source LLMs',
-    description: 'Misuse risks that argue for restraint over release.',
-  },
-  {
-    id: '5',
-    video_url: `${SUPABASE_PREFIX}/short_04_consequences.mp4`,
-    topic_title: 'Open vs. Closed Source LLMs',
-    description: 'What happened in markets where each path won.',
-  },
-  {
-    id: '6',
-    video_url: `${SUPABASE_PREFIX}/short_05_where_we_stand.mp4`,
-    topic_title: 'Open vs. Closed Source LLMs',
-    description: 'The fight is no longer theoretical. It is happening this quarter.',
-  },
-];
+function topicsToReels(topics: Topic[]): Reel[] {
+  const reels: Reel[] = [];
+  const ROLE_DESCRIPTIONS: Record<string, string> = {
+    origin: 'The history that shaped this debate.',
+    key_players: 'Who holds power in this conversation.',
+    case_for_a: 'The strongest argument for one side.',
+    case_for_b: 'The strongest argument for the other.',
+    consequences: 'What happened where each path was taken.',
+    where_we_stand: 'The live tension. What is at stake today.',
+  };
+  for (const topic of topics) {
+    const videos = topic.video_urls ?? [];
+    const scripts = topic.scripts ?? [];
+    if (videos.length === 0) continue;
+    videos.forEach((url, i) => {
+      const script = scripts[i];
+      reels.push({
+        id: `${topic.id}-${i}`,
+        topic_id: topic.id,
+        video_url: url,
+        topic_title: topic.topic,
+        description: script?.headline ?? ROLE_DESCRIPTIONS[script?.role ?? ''] ?? '',
+      });
+    });
+  }
+  return reels;
+}
 
 type ReelItemProps = {
   item: Reel;
@@ -78,6 +68,7 @@ function ReelItem({ item, active, height }: ReelItemProps) {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const [paused, setPaused] = useState(false);
+  const router = useRouter();
 
   const player = useVideoPlayer(item.video_url, (p) => {
     p.loop = true;
@@ -108,7 +99,7 @@ function ReelItem({ item, active, height }: ReelItemProps) {
         onPress={() => setPaused((p) => !p)}
       />
 
-      {/* Title chip — full width at the top (top safe area inset) */}
+      {/* Title chip */}
       <View
         pointerEvents="none"
         style={[
@@ -124,16 +115,14 @@ function ReelItem({ item, active, height }: ReelItemProps) {
         </Text>
       </View>
 
-      {/* Explore Topic CTA — pinned to the bottom of THIS reel so it scrolls with it */}
+      {/* Explore Topic CTA */}
       <View pointerEvents="box-none" style={styles.ctaContainer}>
         <Pressable
           style={({ pressed }) => [
             styles.exploreBtn,
             pressed && { opacity: 0.85 },
           ]}
-          onPress={() => {
-            // TODO: route to /topic/[id] when topic detail screen exists
-          }}
+          onPress={() => router.push(`/topic/${item.topic_id}`)}
         >
           <Ionicons name="play-circle" size={18} color={CTA_FG} />
           <Text style={styles.exploreText}>Explore Topic</Text>
@@ -155,6 +144,16 @@ function ReelItem({ item, active, height }: ReelItemProps) {
 export default function ForYouScreen() {
   const [containerHeight, setContainerHeight] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [reels, setReels] = useState<Reel[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.getTopics().then((topics) => {
+      setReels(topicsToReels(topics));
+    }).catch(() => {
+      // Silently fall through — empty feed shown
+    }).finally(() => setLoading(false));
+  }, []);
 
   const onLayout = (e: LayoutChangeEvent) => {
     const h = e.nativeEvent.layout.height;
@@ -183,9 +182,14 @@ export default function ForYouScreen() {
   return (
     <View style={styles.root} onLayout={onLayout}>
       <StatusBar style="light" />
-      {containerHeight > 0 && (
+      {loading && (
+        <View style={styles.loader}>
+          <ActivityIndicator color={Colors.PRIMARY} size="large" />
+        </View>
+      )}
+      {!loading && containerHeight > 0 && (
         <FlatList
-          data={REELS}
+          data={reels}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           pagingEnabled
@@ -203,6 +207,11 @@ export default function ForYouScreen() {
           windowSize={3}
           maxToRenderPerBatch={2}
           initialNumToRender={1}
+          ListEmptyComponent={
+            <View style={[styles.loader, { height: containerHeight }]}>
+              <Text style={styles.emptyText}>No videos available yet.</Text>
+            </View>
+          }
         />
       )}
     </View>
@@ -219,6 +228,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
     overflow: 'hidden',
   },
+  loader: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    fontFamily: 'Newsreader_400Regular',
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.6)',
+  },
 
   titleChip: {
     position: 'absolute',
@@ -232,7 +251,6 @@ const styles = StyleSheet.create({
     gap: 6,
     overflow: 'hidden',
   },
-
   topicTitle: {
     fontFamily: 'Newsreader_600SemiBold',
     fontSize: 20,
