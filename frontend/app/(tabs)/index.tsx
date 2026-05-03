@@ -72,7 +72,6 @@ function ReelItem({ item, active, height }: ReelItemProps) {
 
   const player = useVideoPlayer(item.video_url, (p) => {
     p.loop = true;
-    p.muted = true;
     p.play();
   });
 
