@@ -1,0 +1,9 @@
+.agents
+.claude
+.venv
+.env
+/plans
+__pycache__/
+*.pyc
+*.pyo
+node_modules/
