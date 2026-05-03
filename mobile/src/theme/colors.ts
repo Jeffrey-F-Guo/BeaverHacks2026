@@ -1,0 +1,27 @@
+export const Colors = {
+  PRIMARY: '#0d631b',
+  PRIMARY_CONTAINER: '#2e7d32',
+  PRIMARY_FIXED: '#a3f69c',
+  INVERSE_PRIMARY: '#88d982',
+  ON_PRIMARY: '#ffffff',
+
+  SECONDARY: '#4c56af',
+  SECONDARY_CONTAINER: '#959efd',
+
+  SURFACE: '#f8f9fa',
+  SURFACE_CONTAINER_LOWEST: '#ffffff',
+  SURFACE_CONTAINER_LOW: '#f3f4f5',
+  SURFACE_CONTAINER: '#edeeef',
+  SURFACE_CONTAINER_HIGH: '#e7e8e9',
+  SURFACE_CONTAINER_HIGHEST: '#e1e3e4',
+  SURFACE_DIM: '#d9dadb',
+
+  ON_SURFACE: '#191c1d',
+  ON_SURFACE_VARIANT: '#40493d',
+  ON_BACKGROUND: '#191c1d',
+  OUTLINE: '#707a6c',
+  OUTLINE_VARIANT: '#bfcaba',
+
+  INVERSE_SURFACE: '#2e3132',
+  ON_INVERSE_SURFACE: '#f0f1f2',
+} as const;
