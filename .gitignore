@@ -1,3 +1,16 @@
+docs/
+design/
+.claude/settings.local.json
+.DS_Store
+
+# Backend
+backend/.env
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/.pytest_cache/
+backend/.cache/
+backend/output/
 backend/.env
 stitch_groundtruth_ai_debate_platform
 groundtruth-stitch-brief.md
