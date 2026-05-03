@@ -133,7 +133,7 @@ export default function ResearchScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.wordmark}>GroundTruth</Text>
+        <Text style={styles.wordmark}>Verdict</Text>
         <View style={styles.headerIcon}>
           <MaterialCommunityIcons name="account-circle" size={28} color={Colors.OUTLINE} />
         </View>

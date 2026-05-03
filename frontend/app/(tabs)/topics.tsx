@@ -82,7 +82,7 @@ export default function TopicsScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.wordmark}>GroundTruth</Text>
+        <Text style={styles.wordmark}>Verdict</Text>
         <TouchableOpacity style={styles.headerIcon}>
           <MaterialCommunityIcons name="magnify" size={22} color={Colors.ON_SURFACE} />
         </TouchableOpacity>

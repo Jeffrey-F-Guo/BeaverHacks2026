@@ -97,7 +97,7 @@ export default function VideosScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.wordmark}>GroundTruth</Text>
+        <Text style={styles.wordmark}>Verdict</Text>
         <View style={styles.headerIcon}>
           <MaterialCommunityIcons name="account-circle" size={26} color={Colors.OUTLINE} />
         </View>
