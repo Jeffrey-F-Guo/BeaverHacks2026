@@ -31,7 +31,7 @@ export default function SearchScreen() {
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.wordmark}>GroundTruth</Text>
+        <Text style={styles.wordmark}>Verdict</Text>
       </View>
 
       <View style={styles.searchBar}>

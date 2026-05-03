@@ -31,3 +31,4 @@ backend/output/
 # Stitch
 stitch_groundtruth_ai_debate_platform
 groundtruth-stitch-brief.md
+frontend/src/assets

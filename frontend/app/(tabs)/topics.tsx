@@ -6,7 +6,23 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Image,
+  ImageSourcePropType,
 } from 'react-native';
+
+const TOPIC_IMAGES: { keywords: string[]; source: ImageSourcePropType }[] = [
+  { keywords: ['drug', 'narcotic', 'substance', 'cannabis', 'marijuana', 'opioid'], source: require('../../src/assets/drugs.jpg') },
+  { keywords: ['college', 'university', 'campus', 'tuition', 'student', 'education', 'degree'], source: require('../../src/assets/colleg.webp') },
+  { keywords: ['open', 'close', 'business', 'store', 'shop', 'market'], source: require('../../src/assets/openclose.png') },
+];
+
+function getTopicImage(topicName: string): ImageSourcePropType | null {
+  const lower = topicName.toLowerCase();
+  for (const entry of TOPIC_IMAGES) {
+    if (entry.keywords.some((kw) => lower.includes(kw))) return entry.source;
+  }
+  return null;
+}
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -34,7 +50,15 @@ function TopicCard({ topic, onPress }: { topic: TopicWithVotes; onPress: () => v
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
       <View style={styles.cardImageContainer}>
-        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: Colors.PRIMARY_CONTAINER }]} />
+        {getTopicImage(topic.topic) ? (
+          <Image
+            source={getTopicImage(topic.topic)!}
+            style={StyleSheet.absoluteFillObject}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: Colors.PRIMARY_CONTAINER }]} />
+        )}
         <LinearGradient
           colors={['transparent', 'rgba(25,28,29,0.85)']}
           style={StyleSheet.absoluteFillObject}
@@ -82,7 +106,7 @@ export default function TopicsScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.wordmark}>GroundTruth</Text>
+        <Text style={styles.wordmark}>Verdict</Text>
         <TouchableOpacity style={styles.headerIcon}>
           <MaterialCommunityIcons name="magnify" size={22} color={Colors.ON_SURFACE} />
         </TouchableOpacity>
@@ -202,6 +226,7 @@ const styles = StyleSheet.create({
   cardImageContainer: {
     height: 200,
     position: 'relative',
+    overflow: 'hidden',
   },
   cardImageContent: {
     position: 'absolute',
@@ -224,6 +249,7 @@ const styles = StyleSheet.create({
   },
   cardBody: {
     padding: 20,
+    backgroundColor: Colors.SURFACE_CONTAINER_LOWEST,
   },
   cardSummary: {
     fontFamily: 'Newsreader_400Regular',

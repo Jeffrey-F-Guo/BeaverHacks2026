@@ -83,7 +83,7 @@ export default function DeepDiveScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <MaterialCommunityIcons name="arrow-left" size={22} color={Colors.ON_SURFACE} />
           </TouchableOpacity>
-          <Text style={styles.wordmark}>GroundTruth</Text>
+          <Text style={styles.wordmark}>Verdict.</Text>
           <View style={{ width: 30 }} />
         </View>
         <View style={styles.loader}>
@@ -100,7 +100,7 @@ export default function DeepDiveScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <MaterialCommunityIcons name="arrow-left" size={22} color={Colors.ON_SURFACE} />
           </TouchableOpacity>
-          <Text style={styles.wordmark}>GroundTruth</Text>
+          <Text style={styles.wordmark}>Verdict.</Text>
           <View style={{ width: 30 }} />
         </View>
         <View style={styles.loader}>
@@ -116,7 +116,7 @@ export default function DeepDiveScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <MaterialCommunityIcons name="arrow-left" size={22} color={Colors.ON_SURFACE} />
         </TouchableOpacity>
-        <Text style={styles.wordmark}>GroundTruth</Text>
+        <Text style={styles.wordmark}>Verdict</Text>
         <View style={{ width: 30 }} />
       </View>
       <ProgressBar percent={percent} />

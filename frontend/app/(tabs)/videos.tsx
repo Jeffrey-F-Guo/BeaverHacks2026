@@ -97,14 +97,14 @@ export default function VideosScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.wordmark}>GroundTruth</Text>
+        <Text style={styles.wordmark}>Verdict</Text>
         <View style={styles.headerIcon}>
           <MaterialCommunityIcons name="account-circle" size={26} color={Colors.OUTLINE} />
         </View>
       </View>
       <ProgressBar percent={videoReady ? 100 : audioReady ? 80 : scriptsReady ? 50 : 20} />
 
-      {loading ? (
+      {loading ? ( 
         <View style={styles.loader}>
           <ActivityIndicator color={Colors.PRIMARY} size="large" />
         </View>
