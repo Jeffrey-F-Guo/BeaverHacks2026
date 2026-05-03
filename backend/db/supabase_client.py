@@ -23,5 +23,6 @@ def upload_image(topic_slug: str, filename: str, data: bytes) -> str:
     bucket = os.environ["SUPABASE_STORAGE_BUCKET"]
     db = get_supabase()
     path = f"research/{topic_slug}/{filename}"
-    db.storage.from_(bucket).upload(path, data, {"content-type": "image/png"})
+    # upsert=True overwrites if the file already exists (safe to re-run)
+    db.storage.from_(bucket).upload(path, data, {"content-type": "image/png", "upsert": "true"})
     return db.storage.from_(bucket).get_public_url(path)
