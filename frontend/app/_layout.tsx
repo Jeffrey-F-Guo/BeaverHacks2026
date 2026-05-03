@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useEffect } from 'react';
+import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
   useFonts,
   Newsreader_400Regular,
@@ -15,11 +16,11 @@ import {
   Inter_500Medium,
   Inter_600SemiBold,
 } from '@expo-google-fonts/inter';
-import AppNavigator from './src/navigation/AppNavigator';
+import 'react-native-reanimated';
 
 SplashScreen.preventAutoHideAsync();
 
-export default function App() {
+export default function RootLayout() {
   const [newsreaderLoaded, newsreaderError] = useFonts({
     Newsreader_400Regular,
     Newsreader_400Regular_Italic,
@@ -48,9 +49,8 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <NavigationContainer>
-        <AppNavigator />
-      </NavigationContainer>
+      <Stack screenOptions={{ headerShown: false }} />
+      <StatusBar style="light" />
     </SafeAreaProvider>
   );
 }
