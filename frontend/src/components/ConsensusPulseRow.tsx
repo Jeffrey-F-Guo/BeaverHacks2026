@@ -15,7 +15,7 @@ export default function ConsensusPulseRow({ label, percent, status }: Props) {
     <View style={styles.container}>
       <View style={styles.row}>
         <MaterialCommunityIcons name="pulse" size={14} color={Colors.PRIMARY} />
-        <Text style={styles.pulseLabel}>Consensus Pulse</Text>
+        <Text style={styles.pulseLabel}>{label}</Text>
         <View style={{ flex: 1 }} />
         <Text style={styles.status}>{status}</Text>
         <Text style={styles.percent}>{percent}%</Text>
