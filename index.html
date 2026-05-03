@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>GroundTruth — Pipeline Preview</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #0f0f0f; color: #e8e8e8; padding: 40px 24px; max-width: 1200px; margin: 0 auto; }
+
+    h1 { font-size: 1.6rem; margin-bottom: 4px; }
+    .subtitle { color: #64748b; font-size: 0.9rem; margin-bottom: 8px; }
+    .poles { display: flex; gap: 12px; margin-bottom: 28px; flex-wrap: wrap; }
+    .pole { padding: 4px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 600; }
+    .pole.a { background: #1e3a5f; color: #60a5fa; border: 1px solid #2563eb; }
+    .pole.b { background: #3b1e1e; color: #f87171; border: 1px solid #ef4444; }
+
+    .controls { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+    button {
+      background: #2563eb; color: #fff; border: none; padding: 10px 24px;
+      border-radius: 8px; font-size: 0.95rem; cursor: pointer; transition: background 0.15s;
+    }
+    button:hover { background: #1d4ed8; }
+    button:disabled { background: #1e293b; color: #475569; cursor: not-allowed; }
+
+    #status-bar { display: flex; gap: 10px; flex-wrap: wrap; }
+    .stage-pill {
+      padding: 4px 12px; border-radius: 999px; font-size: 0.78rem; font-weight: 500;
+      background: #1e293b; color: #64748b; border: 1px solid #1e293b;
+    }
+    .stage-pill.running  { background: #1c3044; color: #38bdf8; border-color: #0ea5e9; animation: pulse 1.5s infinite; }
+    .stage-pill.complete { background: #14291a; color: #4ade80; border-color: #22c55e; }
+    .stage-pill.failed   { background: #2c1515; color: #f87171; border-color: #ef4444; }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+
+    #message { margin-top: 12px; font-size: 0.88rem; color: #64748b; min-height: 18px; }
+
+    /* Tabs */
+    #output { margin-top: 36px; display: none; }
+    .tabs { display: flex; gap: 2px; border-bottom: 1px solid #1e293b; flex-wrap: wrap; }
+    .tab {
+      padding: 8px 20px; font-size: 0.88rem; cursor: pointer; color: #64748b;
+      border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s;
+    }
+    .tab.active { color: #e2e8f0; border-bottom-color: #2563eb; }
+    .tab:hover:not(.active) { color: #94a3b8; }
+
+    .tab-panel { display: none; padding-top: 28px; }
+    .tab-panel.active { display: block; }
+
+    /* ── Raw markdown ── */
+    #raw-md {
+      background: #0a0a0a; border: 1px solid #1e293b; border-radius: 10px;
+      padding: 28px; line-height: 1.8; color: #cbd5e1; overflow-x: auto;
+      max-height: 80vh; overflow-y: auto;
+    }
+    #raw-md h1,#raw-md h2 { color: #e2e8f0; margin: 24px 0 10px; }
+    #raw-md h3 { color: #94a3b8; margin: 18px 0 8px; }
+    #raw-md p  { margin-bottom: 12px; font-size: 0.92rem; }
+    #raw-md ul,#raw-md ol { padding-left: 20px; margin-bottom: 12px; }
+    #raw-md li { font-size: 0.9rem; margin-bottom: 4px; }
+    #raw-md table { border-collapse: collapse; width: 100%; margin-bottom: 16px; font-size: 0.85rem; }
+    #raw-md th,#raw-md td { border: 1px solid #1e293b; padding: 8px 12px; text-align: left; }
+    #raw-md th { background: #1e293b; color: #94a3b8; }
+    #raw-md a { color: #60a5fa; }
+    #raw-md blockquote { border-left: 3px solid #334155; padding-left: 14px; color: #64748b; margin: 12px 0; }
+    #raw-md code { background: #1e293b; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.85em; }
+    #raw-md pre { background: #1e293b; padding: 14px; border-radius: 8px; overflow-x: auto; margin-bottom: 14px; }
+    #raw-md pre code { background: none; padding: 0; }
+
+    /* ── Briefing ── */
+    .briefing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .b-card { background: #111827; border: 1px solid #1e293b; border-radius: 10px; padding: 20px; }
+    .b-card.full { grid-column: 1 / -1; }
+    .b-card.pole-a { border-top: 3px solid #2563eb; }
+    .b-card.pole-b { border-top: 3px solid #ef4444; }
+    .b-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #475569; margin-bottom: 8px; }
+    .b-card h3 { font-size: 0.95rem; margin-bottom: 10px; color: #e2e8f0; }
+    .b-card p { font-size: 0.88rem; color: #94a3b8; line-height: 1.7; white-space: pre-wrap; }
+    .persona-box { background: #0a0a0a; border: 1px solid #1e293b; border-radius: 6px; padding: 12px 14px; margin-top: 10px; }
+    .persona-box pre { font-family: system-ui, sans-serif; font-size: 0.82rem; color: #64748b; white-space: pre-wrap; line-height: 1.6; }
+
+    /* ── Debate ── */
+    .round-header {
+      font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em;
+      color: #475569; margin: 36px 0 14px; display: flex; align-items: center; gap: 12px;
+    }
+    .round-header::after { content: ""; flex: 1; height: 1px; background: #1e293b; }
+    .debate-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .d-card { border-radius: 10px; padding: 18px; border: 1px solid; }
+    .d-card.red  { background: #1a0e0e; border-color: #7f1d1d; }
+    .d-card.blue { background: #0e131a; border-color: #1e3a5f; }
+    .d-speaker { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
+    .d-card.red  .d-speaker { color: #f87171; }
+    .d-card.blue .d-speaker { color: #60a5fa; }
+    .d-argument { font-size: 0.88rem; color: #cbd5e1; line-height: 1.7; margin-bottom: 12px; }
+    .d-key-claim { font-size: 0.82rem; font-style: italic; color: #94a3b8; border-left: 2px solid #334155; padding-left: 10px; margin-bottom: 10px; }
+    .d-section-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: #475569; margin: 10px 0 4px; }
+    .evidence-list { list-style: none; padding: 0; }
+    .evidence-list li { font-size: 0.8rem; color: #64748b; padding: 2px 0 2px 12px; position: relative; line-height: 1.5; }
+    .evidence-list li::before { content: "·"; position: absolute; left: 0; color: #475569; }
+    .source-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+    .source-chip { background: #1e293b; border-radius: 4px; padding: 2px 8px; font-size: 0.75rem; color: #60a5fa; text-decoration: none; white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+    .source-chip:hover { background: #263548; }
+    .concession-box { background: #1a1a0e; border: 1px solid #854d0e; border-radius: 6px; padding: 8px 12px; margin-top: 8px; font-size: 0.8rem; color: #fbbf24; line-height: 1.5; }
+
+    /* ── Summary ── */
+    .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .sum-card { background: #111827; border: 1px solid #1e293b; border-radius: 10px; padding: 20px; }
+    .sum-card.pole-a { border-top: 3px solid #2563eb; }
+    .sum-card.pole-b { border-top: 3px solid #ef4444; }
+    .sum-card ul { list-style: none; padding: 0; margin-top: 10px; }
+    .sum-card li { font-size: 0.88rem; color: #94a3b8; padding: 8px 0; border-bottom: 1px solid #1e293b; line-height: 1.6; }
+    .sum-card li:last-child { border-bottom: none; }
+    .sum-card li::before { content: "→ "; color: #475569; }
+    .verdict-card { background: #111827; border: 1px solid #1e293b; border-radius: 10px; padding: 24px; }
+    .verdict-card.red-wins  { border-top: 4px solid #ef4444; }
+    .verdict-card.blue-wins { border-top: 4px solid #2563eb; }
+    .verdict-card.tie       { border-top: 4px solid #a855f7; }
+    .verdict-winner { font-size: 1.3rem; font-weight: 700; margin-bottom: 10px; }
+    .verdict-card.red-wins  .verdict-winner { color: #f87171; }
+    .verdict-card.blue-wins .verdict-winner { color: #60a5fa; }
+    .verdict-card.tie       .verdict-winner { color: #c084fc; }
+    .verdict-reasoning { font-size: 0.92rem; color: #94a3b8; line-height: 1.7; margin-bottom: 14px; }
+    .verdict-decisive { font-size: 0.85rem; color: #64748b; border-left: 3px solid #334155; padding-left: 12px; font-style: italic; line-height: 1.6; }
+
+    .pending-notice { color: #475569; font-size: 0.88rem; font-style: italic; padding: 24px 0; }
+
+    @media (max-width: 700px) {
+      .briefing-grid, .debate-row, .summary-grid { grid-template-columns: 1fr; }
+      .b-card.full, .b-card { grid-column: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>GroundTruth</h1>
+  <p class="subtitle" id="topic-subtitle">Pipeline preview</p>
+
+  <div style="margin-bottom:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    <select id="topic-select" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;padding:8px 12px;border-radius:6px;font-size:0.9rem;min-width:320px;" onchange="onTopicChange()">
+      <option value="">— loading topics —</option>
+    </select>
+    <span style="font-size:0.8rem;color:#475569;">or</span>
+    <input id="topic-id-input" placeholder="paste topic UUID" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;padding:8px 12px;border-radius:6px;font-size:0.85rem;width:280px;" oninput="onManualId()" />
+  </div>
+  <div style="margin-bottom:20px;font-size:0.82rem;color:#475569;">
+    Active topic ID: <code id="active-topic-id" style="color:#60a5fa;">none</code>
+  </div>
+
+  <div class="poles" id="poles-bar">
+    <span class="pole a" id="pole-a-label">Pole A</span>
+    <span class="pole b" id="pole-b-label">Pole B</span>
+  </div>
+
+  <div class="controls">
+    <button id="btn" onclick="startPipeline()">Run Pipeline</button>
+    <div id="status-bar">
+      <span class="stage-pill" id="pill-research">research: pending</span>
+      <span class="stage-pill" id="pill-debate">debate: pending</span>
+      <span class="stage-pill" id="pill-summary">summary: pending</span>
+    </div>
+  </div>
+  <p id="message"></p>
+
+  <div id="output">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('raw')">Raw Report</div>
+      <div class="tab" onclick="switchTab('briefing')">Briefing Sections</div>
+      <div class="tab" onclick="switchTab('debate')">Debate Rounds</div>
+      <div class="tab" onclick="switchTab('summary')">Summary &amp; Verdict</div>
+    </div>
+    <div class="tab-panel active" id="panel-raw">
+      <div id="raw-md"></div>
+    </div>
+    <div class="tab-panel" id="panel-briefing">
+      <div class="briefing-grid" id="briefing-grid"></div>
+    </div>
+    <div class="tab-panel" id="panel-debate">
+      <div id="debate-content"></div>
+    </div>
+    <div class="tab-panel" id="panel-summary">
+      <div id="summary-content"></div>
+    </div>
+  </div>
+
+  <script>
+    let TOPIC_ID = "";
+    const API = "http://localhost:8000";
+    const TABS = ["raw", "briefing", "debate", "summary"];
+    let pollTimer = null;
+
+    function onTopicChange() {
+      const sel = document.getElementById("topic-select");
+      const id = sel.value;
+      if (!id) return;
+      document.getElementById("topic-id-input").value = "";
+      setActiveTopic(id);
+    }
+
+    function onManualId() {
+      const id = document.getElementById("topic-id-input").value.trim();
+      document.getElementById("topic-select").value = "";
+      if (id.length === 36) setActiveTopic(id);
+    }
+
+    function setActiveTopic(id) {
+      TOPIC_ID = id;
+      document.getElementById("active-topic-id").textContent = id;
+      clearInterval(pollTimer);
+      // Reset UI
+      document.getElementById("btn").disabled = false;
+      document.getElementById("btn").textContent = "Run Pipeline";
+      document.getElementById("btn").onclick = startPipeline;
+      document.getElementById("output").style.display = "none";
+      setMessage("");
+      updatePills({ research: "pending", debate: "pending", summary: "pending" });
+      // Check current state for the newly selected topic
+      checkCurrentState();
+    }
+
+    async function loadTopicList() {
+      try {
+        const res = await fetch(`${API}/topics`);
+        const topics = await res.json();
+        const sel = document.getElementById("topic-select");
+        sel.innerHTML = `<option value="">— select a topic —</option>` +
+          topics.map(t => `<option value="${t.id}">${t.topic} [${statusSummary(t.pipeline_status)}]</option>`).join("");
+        // Auto-select first
+        if (topics.length > 0) {
+          sel.value = topics[0].id;
+          setActiveTopic(topics[0].id);
+        }
+      } catch (e) {
+        setMessage(`Could not load topic list: ${e.message}`);
+      }
+    }
+
+    function statusSummary(s) {
+      if (!s) return "?";
+      return ["research","debate","summary"].map(k => s[k]?.[0] ?? "?").join("/");
+    }
+
+    async function checkCurrentState() {
+      if (!TOPIC_ID) return;
+      // Always load whatever data exists — renderers handle missing fields gracefully.
+      // Status check is only needed to decide whether to start polling.
+      try {
+        const res = await fetch(`${API}/pipeline/status/${TOPIC_ID}`);
+        const s = await res.json();
+        updatePills(s);
+        const anyRunning = ["research","debate","summary"].some(st => s[st] === "running");
+        const anyPending = ["research","debate","summary"].some(st => s[st] === "pending" || s[st] === "running");
+        if (anyRunning) {
+          document.getElementById("btn").disabled = true;
+          setMessage("Pipeline already running — polling…");
+          pollStatus();
+        }
+        // Load all data unconditionally — show what's available now
+        await loadAllData();
+        // Keep polling if something isn't done yet
+        if (!anyRunning && anyPending) pollStatus();
+      } catch (e) {
+        setMessage(`Error: ${e.message}`);
+        console.error("checkCurrentState failed:", e);
+      }
+    }
+
+    async function loadAllData() {
+      document.getElementById("output").style.display = "block";
+      // Run both fetches in parallel
+      await Promise.all([loadTopicData(), loadDebateRounds()]);
+    }
+
+    async function startPipeline() {
+      document.getElementById("btn").disabled = true;
+      setMessage("Starting pipeline…");
+      try {
+        await fetch(`${API}/pipeline/start`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ topic_id: TOPIC_ID }),
+        });
+        pollStatus();
+      } catch (e) {
+        setMessage(`Failed to reach API: ${e.message}`);
+        document.getElementById("btn").disabled = false;
+      }
+    }
+
+    function pollStatus() {
+      clearInterval(pollTimer);
+      pollTimer = setInterval(async () => {
+        try {
+          const res = await fetch(`${API}/pipeline/status/${TOPIC_ID}`);
+          const s = await res.json();
+          updatePills(s);
+
+          const allDone = ["research","debate","summary"].every(st => s[st] === "complete" || s[st] === "failed");
+          const anyFailed = ["research","debate","summary"].some(st => s[st] === "failed");
+
+          // Refresh all data on every tick — loaders are idempotent
+          loadAllData();
+
+          if (allDone) {
+            clearInterval(pollTimer);
+            if (anyFailed) {
+              setMessage("A stage failed — check server logs.");
+              document.getElementById("btn").textContent = "Retry";
+              document.getElementById("btn").disabled = false;
+              document.getElementById("btn").onclick = retryPipeline;
+            } else {
+              setMessage("");
+            }
+          } else {
+            const running = ["research","debate","summary"].find(st => s[st] === "running");
+            setMessage(running
+              ? `${running} running… this may take several minutes`
+              : "Waiting for next stage…");
+          }
+        } catch (e) { setMessage(`Poll error: ${e.message}`); }
+      }, 8000);
+    }
+
+    async function retryPipeline() {
+      document.getElementById("btn").disabled = true;
+      document.getElementById("btn").textContent = "Retrying…";
+      await fetch(`${API}/pipeline/retry`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic_id: TOPIC_ID }),
+      });
+      pollStatus();
+    }
+
+    // ── Data loaders ──────────────────────────────────────────────────────────
+
+    async function loadTopicData() {
+      try {
+        const res = await fetch(`${API}/topics/${TOPIC_ID}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const topic = await res.json();
+
+        document.getElementById("topic-subtitle").textContent = topic.topic || "Pipeline preview";
+        document.getElementById("pole-a-label").textContent = topic.pole_a || "Pole A";
+        document.getElementById("pole-b-label").textContent = topic.pole_b || "Pole B";
+
+        document.getElementById("raw-md").innerHTML = topic.research_raw
+          ? marked.parse(topic.research_raw)
+          : `<p class="pending-notice">Raw research report not yet available.</p>`;
+
+        renderBriefing(topic.briefing, topic.pole_a, topic.pole_b);
+
+        if (topic.debate_summary) {
+          renderSummary(topic.debate_summary, topic.pole_a, topic.pole_b);
+        } else {
+          document.getElementById("summary-content").innerHTML =
+            `<p class="pending-notice">Summary not yet available.</p>`;
+        }
+      } catch (e) {
+        console.error("loadTopicData failed:", e);
+        setMessage(`Failed to load topic data: ${e.message}`);
+      }
+    }
+
+    async function loadDebateRounds() {
+      try {
+        const res = await fetch(`${API}/topics/${TOPIC_ID}/rounds`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const rounds = await res.json();
+        if (!rounds || rounds.length === 0) {
+          document.getElementById("debate-content").innerHTML =
+            `<p class="pending-notice">Debate rounds not yet available.</p>`;
+          return;
+        }
+        renderDebate(rounds);
+      } catch (e) {
+        console.error("loadDebateRounds failed:", e);
+        document.getElementById("debate-content").innerHTML =
+          `<p class="pending-notice">Error loading debate rounds: ${e.message}</p>`;
+      }
+    }
+
+    // ── Renderers ─────────────────────────────────────────────────────────────
+
+    const ROUND_NAMES = {
+      1: "Round 1 — Opening Arguments",
+      2: "Round 2 — Evidence Exchange",
+      3: "Round 3 — Direct Attack",
+      4: "Round 4 — Quantitative Counter",
+      5: "Round 5 — Synthesis Attack",
+      6: "Round 6 — Closing Arguments",
+    };
+
+    function renderDebate(rows) {
+      // Group rows by round_number
+      const byRound = {};
+      for (const r of rows) {
+        if (!byRound[r.round_number]) byRound[r.round_number] = {};
+        byRound[r.round_number][r.speaker] = r;
+      }
+
+      const chunks = [];
+      for (const rn of Object.keys(byRound).sort((a,b) => a-b)) {
+        const red = byRound[rn].red;
+        const blue = byRound[rn].blue;
+        chunks.push(`
+          <div class="round-header">
+            ${esc(ROUND_NAMES[rn] || `Round ${rn}`)}
+          </div>
+          <div class="debate-row">
+            ${red  ? debateCard(red,  "red")  : ""}
+            ${blue ? debateCard(blue, "blue") : ""}
+          </div>
+        `);
+      }
+      document.getElementById("debate-content").innerHTML = chunks.join("");
+    }
+
+    function debateCard(turn, side) {
+      const evidence = (turn.evidence_cited || []).map(e => `<li>${esc(e)}</li>`).join("");
+      const sources  = (turn.search_sources || []).map(s =>
+        `<a class="source-chip" href="${esc(s.url)}" target="_blank" title="${esc(s.title)}">${esc(s.title || s.url)}</a>`
+      ).join("");
+      const queries  = (turn.search_queries || []).join(" · ");
+      const concession = turn.concession
+        ? `<div class="d-section-label">Concession</div><div class="concession-box">${esc(turn.concession)}</div>`
+        : "";
+
+      return `
+        <div class="d-card ${side}">
+          <div class="d-speaker">${side === "red" ? "🔴 Red" : "🔵 Blue"}</div>
+          <div class="d-argument">${esc(turn.argument)}</div>
+          <div class="d-key-claim">${esc(turn.key_claim)}</div>
+          ${concession}
+          ${evidence ? `<div class="d-section-label">Evidence Cited</div><ul class="evidence-list">${evidence}</ul>` : ""}
+          ${sources  ? `<div class="d-section-label">Search Sources</div><div class="source-list">${sources}</div>` : ""}
+          ${queries  ? `<div class="d-section-label">Queries</div><div style="font-size:0.75rem;color:#475569;margin-top:4px;">${esc(queries)}</div>` : ""}
+        </div>
+      `;
+    }
+
+    function renderBriefing(b, poleA, poleB) {
+      if (!b) {
+        document.getElementById("briefing-grid").innerHTML = "<p style='color:#64748b'>No briefing data.</p>";
+        return;
+      }
+      document.getElementById("briefing-grid").innerHTML = `
+        <div class="b-card full">
+          <div class="b-label">§1 — Origin</div>
+          <p>${esc(b.origin)}</p>
+        </div>
+        <div class="b-card full">
+          <div class="b-label">§2 — Key Players</div>
+          <p>${esc(b.key_players)}</p>
+        </div>
+        <div class="b-card pole-a">
+          <div class="b-label">§3 — The Case For</div>
+          <h3>${esc(poleA)}</h3>
+          <p>${esc(b.case_for_a)}</p>
+        </div>
+        <div class="b-card pole-b">
+          <div class="b-label">§4 — The Case For</div>
+          <h3>${esc(poleB)}</h3>
+          <p>${esc(b.case_for_b)}</p>
+        </div>
+        <div class="b-card full">
+          <div class="b-label">§5 — Consequences</div>
+          <p>${esc(b.consequences)}</p>
+        </div>
+        <div class="b-card full">
+          <div class="b-label">§6 — Current State</div>
+          <p>${esc(b.current_state)}</p>
+        </div>
+        <div class="b-card pole-a">
+          <div class="b-label">Debate Persona — Red Agent</div>
+          <div class="persona-box"><pre>${esc(b.persona_red_prompt)}</pre></div>
+        </div>
+        <div class="b-card pole-b">
+          <div class="b-label">Debate Persona — Blue Agent</div>
+          <div class="persona-box"><pre>${esc(b.persona_blue_prompt)}</pre></div>
+        </div>
+      `;
+    }
+
+    function renderSummary(s, poleA, poleB) {
+      const sideAPoints = (s.side_a_points || []).map(p => `<li>${esc(p)}</li>`).join("");
+      const sideBPoints = (s.side_b_points || []).map(p => `<li>${esc(p)}</li>`).join("");
+      const v = s.facilitator_verdict || {};
+      const side = v.prevailing_side || "tie";
+      const winnerLabel = side === "red"
+        ? `🔴 Red wins — ${esc(poleA)}`
+        : side === "blue"
+        ? `🔵 Blue wins — ${esc(poleB)}`
+        : "⚖️ Tie";
+
+      document.getElementById("summary-content").innerHTML = `
+        <div class="summary-grid">
+          <div class="sum-card pole-a">
+            <div class="b-label">Strongest Points — Red / ${esc(poleA)}</div>
+            <ul>${sideAPoints || "<li>None recorded.</li>"}</ul>
+          </div>
+          <div class="sum-card pole-b">
+            <div class="b-label">Strongest Points — Blue / ${esc(poleB)}</div>
+            <ul>${sideBPoints || "<li>None recorded.</li>"}</ul>
+          </div>
+        </div>
+        <div class="verdict-card ${side === "red" ? "red-wins" : side === "blue" ? "blue-wins" : "tie"}">
+          <div class="b-label">Facilitator Verdict</div>
+          <div class="verdict-winner">${winnerLabel}</div>
+          <div class="verdict-reasoning">${esc(v.reasoning || "")}</div>
+          ${v.decisive_argument ? `<div class="d-section-label" style="margin:14px 0 6px">Decisive Argument</div><div class="verdict-decisive">${esc(v.decisive_argument)}</div>` : ""}
+        </div>
+      `;
+    }
+
+    // ── Utilities ─────────────────────────────────────────────────────────────
+
+    function updatePills(s) {
+      for (const stage of ["research", "debate", "summary"]) {
+        const pill = document.getElementById(`pill-${stage}`);
+        pill.className = `stage-pill ${s[stage]}`;
+        pill.textContent = `${stage}: ${s[stage]}`;
+      }
+    }
+
+    function switchTab(name) {
+      document.querySelectorAll(".tab").forEach((t, i) => {
+        t.classList.toggle("active", TABS[i] === name);
+      });
+      document.querySelectorAll(".tab-panel").forEach((p, i) => {
+        p.classList.toggle("active", `panel-${TABS[i]}` === `panel-${name}`);
+      });
+    }
+
+    function setMessage(msg) { document.getElementById("message").textContent = msg; }
+
+    function esc(str) {
+      return String(str ?? "")
+        .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;");
+    }
+
+    // ── On load ───────────────────────────────────────────────────────────────
+    loadTopicList();
+  </script>
+</body>
+</html>
