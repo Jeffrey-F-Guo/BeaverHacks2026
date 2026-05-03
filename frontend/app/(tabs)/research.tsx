@@ -12,7 +12,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../../src/theme/colors';
-import VeracityBadge from '../../src/components/VeracityBadge';
 import ProgressBar from '../../src/components/ProgressBar';
 import { api, Topic, PipelineStatus } from '../../src/services/api';
 
@@ -176,7 +175,6 @@ export default function ResearchScreen() {
           )}
 
           <View style={styles.heroSection}>
-            <VeracityBadge label={videoComplete ? 'Research Complete' : 'Deep Research Protocol Active'} />
             <Text style={styles.heroTitle}>{selectedTopic.topic}</Text>
             <Text style={styles.heroDesc}>
               Our synthesis engine is cross-referencing sources, mapping stakeholder positions, and building the evidence base for both sides of this debate.
@@ -254,9 +252,9 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.SURFACE_CONTAINER_LOW,
   },
   wordmark: {
-    fontFamily: 'Newsreader_600SemiBold',
-    fontSize: 20,
-    color: Colors.PRIMARY,
+    fontFamily: 'PlayfairDisplay_700Bold_Italic',
+    fontSize: 27,
+    color: Colors.ON_SURFACE,
     letterSpacing: -0.3,
   },
   headerIcon: { padding: 2 },

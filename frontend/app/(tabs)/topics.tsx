@@ -28,23 +28,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Colors } from '../../src/theme/colors';
-import VeracityBadge from '../../src/components/VeracityBadge';
 import ProgressBar from '../../src/components/ProgressBar';
-import ConsensusPulseRow from '../../src/components/ConsensusPulseRow';
-import { api, Topic, VoteDistribution } from '../../src/services/api';
+import { api, Topic } from '../../src/services/api';
 
-function consensusStatus(mean: number | null): { percent: number; status: string } {
-  if (mean === null) return { percent: 50, status: 'No votes yet' };
-  const percent = Math.round(mean * 100);
-  if (percent < 30) return { percent, status: 'Polarized' };
-  if (percent < 60) return { percent, status: 'Divergent' };
-  return { percent, status: 'Converging' };
-}
-
-type TopicWithVotes = Topic & { distribution?: VoteDistribution };
-
-function TopicCard({ topic, onPress }: { topic: TopicWithVotes; onPress: () => void }) {
-  const { percent, status } = consensusStatus(topic.distribution?.mean ?? null);
+function TopicCard({ topic, onPress }: { topic: Topic; onPress: () => void }) {
   const isReady = topic.pipeline_status?.video === 'complete';
 
   return (
@@ -75,7 +62,6 @@ function TopicCard({ topic, onPress }: { topic: TopicWithVotes; onPress: () => v
         <Text style={styles.cardSummary} numberOfLines={3}>
           {topic.pole_a} vs. {topic.pole_b}
         </Text>
-        <ConsensusPulseRow label="Consensus Pulse" percent={percent} status={status} />
       </View>
     </TouchableOpacity>
   );
@@ -83,24 +69,14 @@ function TopicCard({ topic, onPress }: { topic: TopicWithVotes; onPress: () => v
 
 export default function TopicsScreen() {
   const router = useRouter();
-  const [topics, setTopics] = useState<TopicWithVotes[]>([]);
+  const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.getTopics().then(async (data) => {
-      // Fetch vote distributions in parallel
-      const withVotes = await Promise.all(
-        data.map(async (t) => {
-          try {
-            const distribution = await api.getVoteDistribution(t.id);
-            return { ...t, distribution };
-          } catch {
-            return t;
-          }
-        })
-      );
-      setTopics(withVotes);
-    }).catch(() => {}).finally(() => setLoading(false));
+    api.getTopics()
+      .then(setTopics)
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   return (
@@ -124,7 +100,6 @@ export default function TopicsScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.hero}>
-            <VeracityBadge label="Veracity Guaranteed" />
             <Text style={styles.heroTitle}>What the world is debating</Text>
             <Text style={styles.heroSubtitle}>
               Every topic is researched by AI, debated by AI, and voted on by you. Real consensus. Real stakes.
@@ -165,9 +140,9 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.SURFACE_CONTAINER_LOW,
   },
   wordmark: {
-    fontFamily: 'Newsreader_600SemiBold',
-    fontSize: 20,
-    color: Colors.PRIMARY,
+    fontFamily: 'PlayfairDisplay_700Bold_Italic',
+    fontSize: 27,
+    color: Colors.ON_SURFACE,
     letterSpacing: -0.3,
   },
   headerIcon: { padding: 4 },

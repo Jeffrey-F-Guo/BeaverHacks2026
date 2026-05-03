@@ -16,6 +16,10 @@ import {
   Inter_500Medium,
   Inter_600SemiBold,
 } from '@expo-google-fonts/inter';
+import {
+  useFonts as usePlayfairFonts,
+  PlayfairDisplay_700Bold_Italic,
+} from '@expo-google-fonts/playfair-display';
 import 'react-native-reanimated';
 
 SplashScreen.preventAutoHideAsync();
@@ -34,8 +38,12 @@ export default function RootLayout() {
     Inter_600SemiBold,
   });
 
-  const fontsLoaded = newsreaderLoaded && interLoaded;
-  const fontError = newsreaderError || interError;
+  const [playfairLoaded, playfairError] = usePlayfairFonts({
+    PlayfairDisplay_700Bold_Italic,
+  });
+
+  const fontsLoaded = newsreaderLoaded && interLoaded && playfairLoaded;
+  const fontError = newsreaderError || interError || playfairError;
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
