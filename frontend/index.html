@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>GroundTruth — Research Preview</title>
+  <!-- marked.js renders the raw markdown as HTML -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #0f0f0f; color: #e8e8e8; padding: 40px 24px; max-width: 1200px; margin: 0 auto; }
+
+    h1 { font-size: 1.6rem; margin-bottom: 4px; }
+    .subtitle { color: #64748b; font-size: 0.9rem; margin-bottom: 8px; }
+    .poles { display: flex; gap: 12px; margin-bottom: 28px; }
+    .pole { padding: 4px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 600; }
+    .pole.a { background: #1e3a5f; color: #60a5fa; border: 1px solid #2563eb; }
+    .pole.b { background: #3b1e1e; color: #f87171; border: 1px solid #ef4444; }
+
+    .controls { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+    button {
+      background: #2563eb; color: #fff; border: none; padding: 10px 24px;
+      border-radius: 8px; font-size: 0.95rem; cursor: pointer; transition: background 0.15s;
+    }
+    button:hover { background: #1d4ed8; }
+    button:disabled { background: #1e293b; color: #475569; cursor: not-allowed; }
+
+    #status-bar { display: flex; gap: 12px; flex-wrap: wrap; }
+    .stage-pill {
+      padding: 4px 12px; border-radius: 999px; font-size: 0.78rem; font-weight: 500;
+      background: #1e293b; color: #64748b; border: 1px solid #1e293b;
+    }
+    .stage-pill.running { background: #1c3044; color: #38bdf8; border-color: #0ea5e9; animation: pulse 1.5s infinite; }
+    .stage-pill.complete { background: #14291a; color: #4ade80; border-color: #22c55e; }
+    .stage-pill.failed  { background: #2c1515; color: #f87171; border-color: #ef4444; }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+
+    #message { margin-top: 12px; font-size: 0.88rem; color: #64748b; min-height: 18px; }
+
+    /* Tab switcher */
+    #output { margin-top: 36px; display: none; }
+    .tabs { display: flex; gap: 2px; margin-bottom: 0; border-bottom: 1px solid #1e293b; }
+    .tab {
+      padding: 8px 20px; font-size: 0.88rem; cursor: pointer; color: #64748b;
+      border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s;
+    }
+    .tab.active { color: #e2e8f0; border-bottom-color: #2563eb; }
+    .tab:hover:not(.active) { color: #94a3b8; }
+
+    .tab-panel { display: none; padding-top: 28px; }
+    .tab-panel.active { display: block; }
+
+    /* Raw markdown panel */
+    #raw-md {
+      background: #0a0a0a; border: 1px solid #1e293b; border-radius: 10px;
+      padding: 28px; line-height: 1.8; color: #cbd5e1; overflow-x: auto;
+      max-height: 80vh; overflow-y: auto;
+    }
+    #raw-md h1,#raw-md h2 { color: #e2e8f0; margin: 24px 0 10px; }
+    #raw-md h3 { color: #94a3b8; margin: 18px 0 8px; }
+    #raw-md p  { margin-bottom: 12px; font-size: 0.92rem; }
+    #raw-md ul,#raw-md ol { padding-left: 20px; margin-bottom: 12px; }
+    #raw-md li { font-size: 0.9rem; margin-bottom: 4px; }
+    #raw-md table { border-collapse: collapse; width: 100%; margin-bottom: 16px; font-size: 0.85rem; }
+    #raw-md th,#raw-md td { border: 1px solid #1e293b; padding: 8px 12px; text-align: left; }
+    #raw-md th { background: #1e293b; color: #94a3b8; }
+    #raw-md a { color: #60a5fa; }
+    #raw-md blockquote { border-left: 3px solid #334155; padding-left: 14px; color: #64748b; margin: 12px 0; }
+    #raw-md code { background: #1e293b; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.85em; }
+    #raw-md pre { background: #1e293b; padding: 14px; border-radius: 8px; overflow-x: auto; margin-bottom: 14px; }
+    #raw-md pre code { background: none; padding: 0; }
+
+    /* Briefing panel */
+    .briefing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .b-card { background: #111827; border: 1px solid #1e293b; border-radius: 10px; padding: 20px; }
+    .b-card.full { grid-column: 1 / -1; }
+    .b-card.pole-a { border-top: 3px solid #2563eb; }
+    .b-card.pole-b { border-top: 3px solid #ef4444; }
+    .b-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #475569; margin-bottom: 8px; }
+    .b-card h3 { font-size: 0.95rem; margin-bottom: 10px; color: #e2e8f0; }
+    .b-card p { font-size: 0.88rem; color: #94a3b8; line-height: 1.7; white-space: pre-wrap; }
+
+    .persona-box { background: #0a0a0a; border: 1px solid #1e293b; border-radius: 6px; padding: 12px 14px; margin-top: 10px; }
+    .persona-box pre { font-family: system-ui, sans-serif; font-size: 0.82rem; color: #64748b; white-space: pre-wrap; line-height: 1.6; }
+
+    @media (max-width: 680px) { .briefing-grid { grid-template-columns: 1fr; } .b-card.full { grid-column: 1; } }
+  </style>
+</head>
+<body>
+
+  <h1>GroundTruth</h1>
+  <p class="subtitle">Research pipeline preview</p>
+  <div class="poles">
+    <span class="pole a">Open Source LLMs</span>
+    <span class="pole b">Closed Source LLMs</span>
+  </div>
+
+  <div class="controls">
+    <button id="btn" onclick="startPipeline()">Run Research</button>
+    <div id="status-bar">
+      <span class="stage-pill" id="pill-research">research: pending</span>
+      <span class="stage-pill" id="pill-debate">debate: pending</span>
+      <span class="stage-pill" id="pill-summary">summary: pending</span>
+    </div>
+  </div>
+  <p id="message"></p>
+
+  <div id="output">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('raw')">Raw Research Report</div>
+      <div class="tab" onclick="switchTab('briefing')">Extracted Briefing</div>
+    </div>
+
+    <div class="tab-panel active" id="panel-raw">
+      <div id="raw-md"></div>
+    </div>
+
+    <div class="tab-panel" id="panel-briefing">
+      <div class="briefing-grid" id="briefing-grid"></div>
+    </div>
+  </div>
+
+  <script>
+    const TOPIC_ID = "8cf6f0fa-d30e-4a62-abd4-2deeff44b659";
+    const API = "http://localhost:8000";
+    let pollTimer = null;
+
+    // Kick off the pipeline then immediately start polling status
+    async function startPipeline() {
+      document.getElementById('btn').disabled = true;
+      setMessage("Starting research pipeline…");
+
+      try {
+        await fetch(`${API}/pipeline/start`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ topic_id: TOPIC_ID }),
+        });
+        pollStatus();
+      } catch (e) {
+        setMessage(`Failed to reach API: ${e.message}`);
+        document.getElementById('btn').disabled = false;
+      }
+    }
+
+    // Poll /pipeline/status every 8 seconds and update pills; load results when research is complete
+    function pollStatus() {
+      clearInterval(pollTimer);
+      pollTimer = setInterval(async () => {
+        try {
+          const res = await fetch(`${API}/pipeline/status/${TOPIC_ID}`);
+          const s = await res.json();
+          updatePills(s);
+
+          if (s.research === "complete") {
+            clearInterval(pollTimer);
+            setMessage("Research complete — loading results…");
+            await loadResults();
+            setMessage("");
+          } else if (s.research === "failed") {
+            clearInterval(pollTimer);
+            setMessage("Research failed. Check server logs and use Retry.");
+            document.getElementById('btn').textContent = "Retry";
+            document.getElementById('btn').disabled = false;
+            document.getElementById('btn').onclick = retryPipeline;
+          } else {
+            setMessage("Deep research agent running… this takes a few minutes.");
+          }
+        } catch (e) {
+          setMessage(`Poll error: ${e.message}`);
+        }
+      }, 8000);
+    }
+
+    async function retryPipeline() {
+      document.getElementById('btn').disabled = true;
+      document.getElementById('btn').textContent = "Retrying…";
+      await fetch(`${API}/pipeline/retry`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic_id: TOPIC_ID }),
+      });
+      pollStatus();
+    }
+
+    // Fetch the full topic row and render both panels
+    async function loadResults() {
+      const res = await fetch(`${API}/topics/${TOPIC_ID}`);
+      const topic = await res.json();
+
+      // Raw markdown panel — render via marked.js
+      document.getElementById('raw-md').innerHTML =
+        marked.parse(topic.research_raw || "_No raw markdown returned._");
+
+      // Extracted briefing panel
+      renderBriefing(topic.briefing, topic.pole_a, topic.pole_b);
+
+      document.getElementById('output').style.display = 'block';
+    }
+
+    function renderBriefing(b, poleA, poleB) {
+      if (!b) { document.getElementById('briefing-grid').innerHTML = '<p style="color:#64748b">No briefing data.</p>'; return; }
+
+      document.getElementById('briefing-grid').innerHTML = `
+        <div class="b-card full">
+          <div class="b-label">Origin</div>
+          <p>${esc(b.origin)}</p>
+        </div>
+        <div class="b-card full">
+          <div class="b-label">Key Players</div>
+          <p>${esc(b.key_players)}</p>
+        </div>
+        <div class="b-card pole-a">
+          <div class="b-label">The Case For</div>
+          <h3>${esc(poleA)}</h3>
+          <p>${esc(b.case_for_a)}</p>
+        </div>
+        <div class="b-card pole-b">
+          <div class="b-label">The Case For</div>
+          <h3>${esc(poleB)}</h3>
+          <p>${esc(b.case_for_b)}</p>
+        </div>
+        <div class="b-card full">
+          <div class="b-label">Consequences</div>
+          <p>${esc(b.consequences)}</p>
+        </div>
+        <div class="b-card full">
+          <div class="b-label">Current State</div>
+          <p>${esc(b.current_state)}</p>
+        </div>
+        <div class="b-card pole-a">
+          <div class="b-label">Debate Persona — Red Agent (argues ${esc(poleA)})</div>
+          <div class="persona-box"><pre>${esc(b.persona_red_prompt)}</pre></div>
+        </div>
+        <div class="b-card pole-b">
+          <div class="b-label">Debate Persona — Blue Agent (argues ${esc(poleB)})</div>
+          <div class="persona-box"><pre>${esc(b.persona_blue_prompt)}</pre></div>
+        </div>
+      `;
+    }
+
+    function updatePills(s) {
+      for (const stage of ["research", "debate", "summary"]) {
+        const pill = document.getElementById(`pill-${stage}`);
+        pill.className = `stage-pill ${s[stage]}`;
+        pill.textContent = `${stage}: ${s[stage]}`;
+      }
+    }
+
+    function switchTab(name) {
+      document.querySelectorAll('.tab').forEach((t, i) => {
+        t.classList.toggle('active', ['raw','briefing'][i] === name);
+      });
+      document.querySelectorAll('.tab-panel').forEach((p, i) => {
+        p.classList.toggle('active', ['panel-raw','panel-briefing'][i] === `panel-${name}`);
+      });
+    }
+
+    function setMessage(msg) { document.getElementById('message').textContent = msg; }
+
+    // Escape HTML to safely insert user-content strings into innerHTML
+    function esc(str) {
+      return String(str ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    }
+
+    // On load, check if research is already complete and show results without re-running
+    (async () => {
+      try {
+        const res = await fetch(`${API}/pipeline/status/${TOPIC_ID}`);
+        const s = await res.json();
+        updatePills(s);
+        if (s.research === "complete") {
+          setMessage("Research already complete — loading results…");
+          await loadResults();
+          setMessage("");
+        } else if (s.research === "running") {
+          document.getElementById('btn').disabled = true;
+          setMessage("Pipeline already running — polling for completion…");
+          pollStatus();
+        }
+      } catch (_) { /* server not up yet, that's fine */ }
+    })();
+  </script>
+</body>
+</html>
