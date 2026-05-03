@@ -49,45 +49,9 @@ export default function TabsLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="research"
-        options={{
-          title: 'Research',
-          tabBarIcon: ({ color, size, focused }) => (
-            <MaterialCommunityIcons
-              name={focused ? 'flask' : 'flask-outline'}
-              size={size}
-              color={color}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="videos"
-        options={{
-          title: 'Videos',
-          tabBarIcon: ({ color, size, focused }) => (
-            <MaterialCommunityIcons
-              name={focused ? 'film' : 'film-outline'}
-              size={size}
-              color={color}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="search"
-        options={{
-          title: 'Search',
-          tabBarIcon: ({ color, size, focused }) => (
-            <MaterialCommunityIcons
-              name={focused ? 'magnify' : 'magnify'}
-              size={size}
-              color={color}
-            />
-          ),
-        }}
-      />
+      <Tabs.Screen name="research" options={{ href: null }} />
+      <Tabs.Screen name="videos" options={{ href: null }} />
+      <Tabs.Screen name="search" options={{ href: null }} />
     </Tabs>
   );
 }

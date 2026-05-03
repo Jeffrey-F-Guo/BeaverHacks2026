@@ -52,6 +52,8 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="topic/[id]" options={{ presentation: 'card' }} />
+        <Stack.Screen name="series/[id]" options={{ presentation: 'fullScreenModal' }} />
+        <Stack.Screen name="deep-dive/[id]" options={{ presentation: 'card' }} />
       </Stack>
       <StatusBar style="dark" />
     </SafeAreaProvider>

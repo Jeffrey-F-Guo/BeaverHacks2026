@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { isAllWatched } from '../../src/services/watchStore';
 import { Colors } from '../../src/theme/colors';
 import VeracityBadge from '../../src/components/VeracityBadge';
 import ProgressBar from '../../src/components/ProgressBar';
@@ -28,9 +29,9 @@ const PART_LABELS = [
   'Where We Stand',
 ];
 
-function ActionRow({ icon, label }: { icon: any; label: string }) {
+function ActionRow({ icon, label, onPress }: { icon: any; label: string; onPress: () => void }) {
   return (
-    <TouchableOpacity style={styles.actionRow} activeOpacity={0.7}>
+    <TouchableOpacity style={styles.actionRow} activeOpacity={0.7} onPress={onPress}>
       <MaterialCommunityIcons name={icon} size={18} color={Colors.PRIMARY} />
       <Text style={styles.actionLabel}>{label}</Text>
       <View style={{ flex: 1 }} />
@@ -48,6 +49,7 @@ export default function TopicDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [votePosition, setVotePosition] = useState<number | null>(null);
   const [voting, setVoting] = useState(false);
+  const [allWatched, setAllWatched] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -59,6 +61,12 @@ export default function TopicDetailScreen() {
       setDistribution(d);
     }).catch(() => {}).finally(() => setLoading(false));
   }, [id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (id) setAllWatched(isAllWatched(id));
+    }, [id])
+  );
 
   async function castVote(position: number) {
     if (!id || voting) return;
@@ -162,54 +170,70 @@ export default function TopicDetailScreen() {
           </View>
         </View>
 
-        {/* Vote spectrum — tap to vote */}
-        <View style={[styles.card, styles.cardFull]}>
-          <View style={styles.spectrumHeader}>
-            <View>
-              <Text style={styles.sectionTitle}>Cast Your Vote</Text>
-              <Text style={styles.sectionSubtitle}>
-                Where do you stand? Tap the spectrum to vote.
-              </Text>
-            </View>
-            <View style={styles.legend}>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: Colors.PRIMARY }]} />
-                <Text style={styles.legendLabel}>Your vote</Text>
+        {/* Vote spectrum — gated until all 6 videos watched */}
+        {allWatched ? (
+          <View style={[styles.card, styles.cardFull]}>
+            <View style={styles.spectrumHeader}>
+              <View>
+                <Text style={styles.sectionTitle}>Cast Your Vote</Text>
+                <Text style={styles.sectionSubtitle}>
+                  Where do you stand? Tap the spectrum to vote.
+                </Text>
               </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: Colors.SURFACE_CONTAINER_HIGHEST }]} />
-                <Text style={styles.legendLabel}>Global</Text>
+              <View style={styles.legend}>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: Colors.PRIMARY }]} />
+                  <Text style={styles.legendLabel}>Your vote</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: Colors.SURFACE_CONTAINER_HIGHEST }]} />
+                  <Text style={styles.legendLabel}>Global</Text>
+                </View>
               </View>
             </View>
-          </View>
-          <SpectrumChart
-            histogram={histogram}
-            userPosition={votePosition}
-            poleA={topic.pole_a}
-            poleB={topic.pole_b}
-          />
-
-          {/* Tap target row for voting */}
-          <View style={styles.voteRow}>
-            <Text style={styles.poleLabel} numberOfLines={1}>{topic.pole_a}</Text>
-            <View style={styles.voteSliderTrack}>
-              {Array.from({ length: 10 }, (_, i) => {
-                const position = (i + 0.5) / 10;
-                const isSelected = votePosition !== null && Math.abs(votePosition - position) < 0.06;
-                return (
-                  <Pressable
-                    key={i}
-                    style={[styles.voteSegment, isSelected && styles.voteSegmentSelected]}
-                    onPress={() => castVote(position)}
-                    disabled={voting}
-                  />
-                );
-              })}
+            <SpectrumChart
+              histogram={histogram}
+              userPosition={votePosition}
+              poleA={topic.pole_a}
+              poleB={topic.pole_b}
+            />
+            <View style={styles.voteRow}>
+              <Text style={styles.poleLabel} numberOfLines={1}>{topic.pole_a}</Text>
+              <View style={styles.voteSliderTrack}>
+                {Array.from({ length: 10 }, (_, i) => {
+                  const position = (i + 0.5) / 10;
+                  const isSelected = votePosition !== null && Math.abs(votePosition - position) < 0.06;
+                  return (
+                    <Pressable
+                      key={i}
+                      style={[styles.voteSegment, isSelected && styles.voteSegmentSelected]}
+                      onPress={() => castVote(position)}
+                      disabled={voting}
+                    />
+                  );
+                })}
+              </View>
+              <Text style={styles.poleLabel} numberOfLines={1}>{topic.pole_b}</Text>
             </View>
-            <Text style={styles.poleLabel} numberOfLines={1}>{topic.pole_b}</Text>
+            {voting && <ActivityIndicator color={Colors.PRIMARY} style={{ marginTop: 8 }} />}
           </View>
-          {voting && <ActivityIndicator color={Colors.PRIMARY} style={{ marginTop: 8 }} />}
-        </View>
+        ) : (
+          <View style={[styles.card, styles.voteLockCard]}>
+            <MaterialCommunityIcons name="lock-outline" size={28} color={Colors.OUTLINE} />
+            <Text style={styles.voteLockTitle}>Voting Locked</Text>
+            <Text style={styles.voteLockSubtitle}>
+              Watch all 6 parts of the video series to unlock voting.
+            </Text>
+            <TouchableOpacity
+              style={styles.watchSeriesBtn}
+              activeOpacity={0.85}
+              onPress={() => router.push(`/series/${id}`)}
+            >
+              <MaterialCommunityIcons name="play-circle-outline" size={16} color={Colors.ON_PRIMARY} />
+              <Text style={styles.watchSeriesText}>Watch Series</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Briefing summary */}
         {topic.briefing && (
@@ -237,9 +261,17 @@ export default function TopicDetailScreen() {
 
         {/* Action rows */}
         <View style={styles.actionsCard}>
-          <ActionRow icon="play-circle" label="Watch Full Series" />
+          <ActionRow
+            icon="play-circle"
+            label="Watch Full Series"
+            onPress={() => router.push(`/series/${id}`)}
+          />
           <View style={styles.actionDivider} />
-          <ActionRow icon="flask-outline" label="View Research" />
+          <ActionRow
+            icon="flask-outline"
+            label="View Research"
+            onPress={() => router.push(`/deep-dive/${id}`)}
+          />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -412,6 +444,42 @@ const styles = StyleSheet.create({
   },
   voteSegmentSelected: {
     backgroundColor: Colors.PRIMARY,
+  },
+
+  voteLockCard: {
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 28,
+  },
+  voteLockTitle: {
+    fontFamily: 'Newsreader_600SemiBold',
+    fontSize: 20,
+    color: Colors.ON_SURFACE,
+    letterSpacing: -0.2,
+  },
+  voteLockSubtitle: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    lineHeight: 19,
+    color: Colors.OUTLINE,
+    textAlign: 'center',
+    paddingHorizontal: 12,
+  },
+  watchSeriesBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+    backgroundColor: Colors.PRIMARY,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 24,
+  },
+  watchSeriesText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
+    color: Colors.ON_PRIMARY,
+    letterSpacing: 0.2,
   },
 
   editorialCard: {
