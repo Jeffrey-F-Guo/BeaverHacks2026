@@ -1,12 +1,7 @@
-fastapi
-uvicorn[standard]
-google-genai>=1.55.0
-supabase
-python-dotenv
-pydantic
 google-genai==1.74.0
 fastapi==0.115.6
 uvicorn[standard]==0.32.1
 python-dotenv==1.0.1
 pydantic==2.10.3
 Pillow==12.2.0
+supabase==2.29.0

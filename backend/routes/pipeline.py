@@ -2,7 +2,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 
 from db.supabase_client import get_supabase
-from pipeline.run_pipeline import run_pipeline
+from agent_pipeline.run_pipeline import run_pipeline
 
 router = APIRouter(prefix="/pipeline")
 

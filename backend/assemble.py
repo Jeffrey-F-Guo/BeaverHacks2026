@@ -8,16 +8,30 @@ import shutil
 import subprocess
 import wave
 from pathlib import Path
+from typing import Literal
 
-from pipeline import OUTPUT_DIR, ReelScript
+from pydantic import BaseModel
 
+OUTPUT_DIR = Path(__file__).parent / "output"
 ASSEMBLY_DIR = OUTPUT_DIR / "reels"
+OUTPUT_DIR.mkdir(exist_ok=True)
 ASSEMBLY_DIR.mkdir(exist_ok=True)
 
 FPS = 30
 TARGET_W, TARGET_H = 1080, 1920
 CROSSFADE_S = 0.5
 WORDS_PER_CAPTION = 6
+
+
+class ReelScript(BaseModel):
+    """Adapter shape consumed by `assemble_reel`. Stage 5 (video.py) maps a
+    ShortScript → ReelScript before calling assemble. `perspective` is just a
+    filename letter; `hook` + `body` become the burned-in subtitle text."""
+
+    perspective: Literal["A", "B", "O", "K", "C", "W", "X"]
+    hook: str
+    body: str
+    cta_to_next: str = ""
 
 
 # --- subtitles -----------------------------------------------------------
@@ -136,7 +150,7 @@ def assemble_reel(
 ) -> Path:
     """Build one reel MP4: ken-burns stills + WAV + burned-in ASS captions."""
     if not shutil.which("ffmpeg"):
-        raise RuntimeError("ffmpeg not on PATH")
+        raise RuntimeError("ffmpeg not on PATH (install via `brew install ffmpeg-full`)")
     duration = _wav_duration_s(wav_path)
     output_path = output_path or (
         ASSEMBLY_DIR / f"reel_{reel_idx:02d}_{script.perspective}.mp4"
@@ -184,19 +198,3 @@ def assemble_reel(
     print(f"[assemble] reel {reel_idx} → {output_path.name} ({duration:.1f}s)")
     subprocess.run(cmd, check=True, cwd=ASSEMBLY_DIR)
     return output_path
-
-
-def assemble_all(
-    scripts: list[ReelScript],
-    stills_by_reel: dict[int, list[Path]],
-    wav_dir: Path = OUTPUT_DIR,
-    prefix: str = "reel",
-) -> list[Path]:
-    """Assemble one MP4 per script. Expects WAVs at `{wav_dir}/{prefix}_NN_X.wav`."""
-    out: list[Path] = []
-    for i, s in enumerate(scripts):
-        wav_path = wav_dir / f"{prefix}_{i:02d}_{s.perspective}.wav"
-        if not wav_path.exists():
-            raise FileNotFoundError(f"missing WAV: {wav_path}")
-        out.append(assemble_reel(i, s, stills_by_reel[i], wav_path))
-    return out
