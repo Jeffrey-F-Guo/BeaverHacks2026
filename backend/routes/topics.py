@@ -24,3 +24,17 @@ async def get_topic(topic_id: str):
     if not result.data:
         raise HTTPException(status_code=404, detail="Topic not found")
     return result.data
+
+
+@router.get("/{topic_id}/rounds")
+async def get_debate_rounds(topic_id: str):
+    db = get_supabase()
+    result = (
+        db.table("debate_rounds")
+        .select("round_number, speaker, argument, key_claim, concession, evidence_cited, search_queries, search_sources")
+        .eq("topic_id", topic_id)
+        .order("round_number")
+        .order("speaker")
+        .execute()
+    )
+    return result.data

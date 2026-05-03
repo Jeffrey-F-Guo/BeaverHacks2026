@@ -42,9 +42,17 @@ CREATE TABLE IF NOT EXISTS debate_rounds (
     argument TEXT NOT NULL,
     key_claim TEXT NOT NULL,
     concession TEXT,
+    evidence_cited JSONB DEFAULT '[]',    -- model-generated list of specific stats/facts cited
+    search_queries JSONB DEFAULT '[]',    -- queries extracted from google_search_call outputs
+    search_sources JSONB DEFAULT '[]',    -- {url, title} pairs from google_search_result outputs
     interaction_id TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Additive columns for existing databases
+ALTER TABLE debate_rounds ADD COLUMN IF NOT EXISTS evidence_cited JSONB DEFAULT '[]';
+ALTER TABLE debate_rounds ADD COLUMN IF NOT EXISTS search_queries JSONB DEFAULT '[]';
+ALTER TABLE debate_rounds ADD COLUMN IF NOT EXISTS search_sources JSONB DEFAULT '[]';
 
 
 CREATE TABLE IF NOT EXISTS votes (

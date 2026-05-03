@@ -60,7 +60,9 @@ What happened where each position was adopted? Cite real-world outcomes — poli
 ## 6. Current State
 What is the live tension today? What specific decisions, legislation, or events are actively contested? What is at stake in the near term?
 
-Include data tables, statistics, and charts where relevant to illustrate key trends. Cite all sources inline."""
+Include data tables, statistics, and charts where relevant to illustrate key trends. Cite all sources inline.
+
+Visualization requirement: For each of the six sections, generate at least one inline chart or graphic where quantitative data is available — trend lines, comparative bar charts, stakeholder maps, or timeline graphics. Embed visualizations directly in the relevant section. Where no quantitative data is appropriate, generate a conceptual diagram or structured comparison table rendered as an image."""
 
 
 def _build_extraction_prompt(raw_report: str, topic: str, pole_a: str, pole_b: str) -> str:
@@ -92,6 +94,7 @@ def run_research(topic_id: str, topic: str, topic_slug: str, pole_a: str, pole_b
         interaction = client.interactions.create(
             agent=RESEARCH_AGENT,
             input=_build_research_prompt(topic, pole_a, pole_b),
+            agent_config={"type": "deep-research", "visualization": "auto"},
             background=True,
         )
 
