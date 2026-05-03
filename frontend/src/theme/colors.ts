@@ -1,8 +1,8 @@
 export const Colors = {
-  PRIMARY: '#0d631b',
-  PRIMARY_CONTAINER: '#2e7d32',
-  PRIMARY_FIXED: '#a3f69c',
-  INVERSE_PRIMARY: '#88d982',
+  PRIMARY: '#0f0f0f',
+  PRIMARY_CONTAINER: '#2a2a2a',
+  PRIMARY_FIXED: '#e8e8e8',
+  INVERSE_PRIMARY: '#888888',
   ON_PRIMARY: '#ffffff',
 
   SECONDARY: '#4c56af',

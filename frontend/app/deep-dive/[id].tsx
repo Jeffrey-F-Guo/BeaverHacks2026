@@ -11,17 +11,100 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Colors } from '../../src/theme/colors';
-import VeracityBadge from '../../src/components/VeracityBadge';
 import ProgressBar from '../../src/components/ProgressBar';
-import { api, TopicDetail, PipelineStatus } from '../../src/services/api';
+import { api, TopicDetail, PipelineStatus, DebateRound } from '../../src/services/api';
+
+const VOTE_RED = '#b05050';
+const VOTE_BLUE = '#4060b0';
 
 type Section = { label: string; content: string };
 
 function BriefingSection({ label, content }: Section) {
+  const [expanded, setExpanded] = useState(false);
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionLabel}>{label}</Text>
-      <Text style={styles.sectionBody}>{content}</Text>
+      <TouchableOpacity
+        style={styles.collapsibleHeader}
+        activeOpacity={0.7}
+        onPress={() => setExpanded((v) => !v)}
+      >
+        <Text style={styles.sectionLabel}>{label}</Text>
+        <MaterialCommunityIcons
+          name={expanded ? 'chevron-up' : 'chevron-down'}
+          size={18}
+          color={Colors.OUTLINE}
+        />
+      </TouchableOpacity>
+      {expanded && <Text style={[styles.sectionBody, { marginTop: 10 }]}>{content}</Text>}
+    </View>
+  );
+}
+
+type RoundGroup = { round_number: number; red: DebateRound | null; blue: DebateRound | null };
+
+function groupRounds(rounds: DebateRound[]): RoundGroup[] {
+  const map = new Map<number, RoundGroup>();
+  for (const r of rounds) {
+    if (!map.has(r.round_number))
+      map.set(r.round_number, { round_number: r.round_number, red: null, blue: null });
+    const g = map.get(r.round_number)!;
+    if (r.speaker === 'red') g.red = r; else g.blue = r;
+  }
+  return Array.from(map.values()).sort((a, b) => a.round_number - b.round_number);
+}
+
+function TurnCard({ turn, sideLabel, accentColor }: { turn: DebateRound; sideLabel: string; accentColor: string }) {
+  return (
+    <View style={[styles.turnCard, { borderLeftWidth: 3, borderLeftColor: accentColor }]}>
+      <Text style={[styles.turnSideLabel, { color: accentColor }]}>{sideLabel}</Text>
+      <Text style={styles.turnKeyClaim}>{turn.key_claim}</Text>
+      <Text style={styles.turnArgument}>{turn.argument}</Text>
+      {turn.concession ? (
+        <View style={styles.concessionBox}>
+          <Text style={styles.concessionLabel}>CONCEDES</Text>
+          <Text style={styles.concessionText}>{turn.concession}</Text>
+        </View>
+      ) : null}
+      {turn.evidence_cited.length > 0 ? (
+        <View style={styles.evidenceBlock}>
+          <Text style={styles.evidenceLabel}>EVIDENCE CITED</Text>
+          {turn.evidence_cited.map((e, i) => (
+            <View key={i} style={styles.evidenceRow}>
+              <Text style={styles.evidenceDot}>·</Text>
+              <Text style={styles.evidenceText}>{e}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function DebateTranscript({ rounds, poleA, poleB }: { rounds: DebateRound[]; poleA: string; poleB: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const groups = groupRounds(rounds);
+  if (groups.length === 0) return null;
+  return (
+    <View style={styles.transcriptCard}>
+      <TouchableOpacity
+        style={styles.collapsibleHeader}
+        activeOpacity={0.7}
+        onPress={() => setExpanded((v) => !v)}
+      >
+        <Text style={styles.debateTitle}>The Debate</Text>
+        <MaterialCommunityIcons
+          name={expanded ? 'chevron-up' : 'chevron-down'}
+          size={20}
+          color={Colors.OUTLINE}
+        />
+      </TouchableOpacity>
+      {expanded && groups.map((g) => (
+        <View key={g.round_number} style={styles.roundBlock}>
+          <Text style={styles.roundLabel}>Round {g.round_number}</Text>
+          {g.red && <TurnCard turn={g.red} sideLabel={poleA} accentColor={VOTE_RED} />}
+          {g.blue && <TurnCard turn={g.blue} sideLabel={poleB} accentColor={VOTE_BLUE} />}
+        </View>
+      ))}
     </View>
   );
 }
@@ -37,21 +120,25 @@ export default function DeepDiveScreen() {
   const router = useRouter();
 
   const [topic, setTopic] = useState<TopicDetail | null>(null);
+  const [rounds, setRounds] = useState<DebateRound[]>([]);
   const [loading, setLoading] = useState(true);
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (!id) return;
-    api.getTopic(id).then((t) => {
+    Promise.all([
+      api.getTopic(id),
+      api.getDebateRounds(id).catch(() => [] as DebateRound[]),
+    ]).then(([t, r]) => {
       setTopic(t);
+      setRounds(r);
       if (t.pipeline_status?.video !== 'complete') {
         pollRef.current = setInterval(async () => {
           try {
             const updated = await api.getPipelineStatus(id);
             setTopic((prev) => prev ? { ...prev, pipeline_status: updated } : prev);
-            if (updated.video === 'complete') {
-              clearInterval(pollRef.current!);
-            }
+            if (updated.video === 'complete') clearInterval(pollRef.current!);
           } catch {}
         }, 5000);
       }
@@ -126,12 +213,9 @@ export default function DeepDiveScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.badgeRow}>
-          <VeracityBadge label="Deep Research" />
-          {!pipelineComplete && (
-            <Text style={styles.processingTag}>• Processing</Text>
-          )}
-        </View>
+        {!pipelineComplete && (
+          <Text style={styles.processingTag}>• Processing</Text>
+        )}
 
         <Text style={styles.topicTitle}>{topic.topic}</Text>
 
@@ -156,18 +240,37 @@ export default function DeepDiveScreen() {
           )
         )}
 
+        {rounds.length > 0 && (
+          <DebateTranscript rounds={rounds} poleA={topic.pole_a} poleB={topic.pole_b} />
+        )}
+
         {topic.debate_summary && (
           <View style={styles.debateCard}>
-            <Text style={styles.debateTitle}>Debate Summary</Text>
-            <Text style={styles.sideLabel}>{topic.pole_a}</Text>
-            {topic.debate_summary.side_a_points.map((pt, i) => (
-              <Text key={i} style={styles.bulletPoint}>• {pt}</Text>
-            ))}
-            <View style={styles.divider} />
-            <Text style={styles.sideLabel}>{topic.pole_b}</Text>
-            {topic.debate_summary.side_b_points.map((pt, i) => (
-              <Text key={i} style={styles.bulletPoint}>• {pt}</Text>
-            ))}
+            <TouchableOpacity
+              style={styles.collapsibleHeader}
+              activeOpacity={0.7}
+              onPress={() => setSummaryExpanded((v) => !v)}
+            >
+              <Text style={styles.debateTitle}>Debate Summary</Text>
+              <MaterialCommunityIcons
+                name={summaryExpanded ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color={Colors.OUTLINE}
+              />
+            </TouchableOpacity>
+            {summaryExpanded && (
+              <View style={{ marginTop: 12, gap: 4 }}>
+                <Text style={[styles.sideLabel, { color: VOTE_RED }]}>{topic.pole_a}</Text>
+                {topic.debate_summary.side_a_points.map((pt, i) => (
+                  <Text key={i} style={styles.bulletPoint}>• {pt}</Text>
+                ))}
+                <View style={styles.divider} />
+                <Text style={[styles.sideLabel, { color: VOTE_BLUE }]}>{topic.pole_b}</Text>
+                {topic.debate_summary.side_b_points.map((pt, i) => (
+                  <Text key={i} style={styles.bulletPoint}>• {pt}</Text>
+                ))}
+              </View>
+            )}
           </View>
         )}
 
@@ -197,9 +300,9 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.SURFACE_CONTAINER_LOW,
   },
   wordmark: {
-    fontFamily: 'Newsreader_600SemiBold',
-    fontSize: 20,
-    color: Colors.PRIMARY,
+    fontFamily: 'PlayfairDisplay_700Bold_Italic',
+    fontSize: 27,
+    color: Colors.ON_SURFACE,
     letterSpacing: -0.3,
   },
   backBtn: { padding: 4 },
@@ -264,9 +367,15 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 1,
   },
+  collapsibleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
   sectionLabel: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 10,
+    fontSize: 13,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
     color: Colors.PRIMARY,
@@ -293,13 +402,13 @@ const styles = StyleSheet.create({
   },
   debateTitle: {
     fontFamily: 'Newsreader_600SemiBold',
-    fontSize: 18,
+    fontSize: 20,
     color: Colors.ON_SURFACE,
     marginBottom: 4,
   },
   sideLabel: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 11,
+    fontSize: 13,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
     color: Colors.PRIMARY,
@@ -333,5 +442,104 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: Colors.ON_PRIMARY,
     letterSpacing: 0.2,
+  },
+
+  transcriptCard: {
+    backgroundColor: Colors.SURFACE_CONTAINER_LOWEST,
+    borderRadius: 8,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: Colors.SURFACE_CONTAINER_HIGH,
+    gap: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  roundBlock: {
+    gap: 8,
+  },
+  roundLabel: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    color: Colors.OUTLINE,
+  },
+  turnCard: {
+    backgroundColor: Colors.SURFACE_CONTAINER_LOW,
+    borderRadius: 6,
+    padding: 14,
+    gap: 6,
+  },
+  turnSideLabel: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: Colors.PRIMARY,
+  },
+  turnKeyClaim: {
+    fontFamily: 'Newsreader_600SemiBold',
+    fontSize: 14,
+    lineHeight: 20,
+    color: Colors.ON_SURFACE,
+  },
+  turnArgument: {
+    fontFamily: 'Newsreader_400Regular',
+    fontSize: 13,
+    lineHeight: 20,
+    color: Colors.ON_SURFACE_VARIANT,
+  },
+  concessionBox: {
+    backgroundColor: '#fffbeb',
+    borderWidth: 1,
+    borderColor: '#fcd34d',
+    borderRadius: 6,
+    padding: 10,
+    gap: 4,
+    marginTop: 2,
+  },
+  concessionLabel: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 9,
+    letterSpacing: 1,
+    color: '#b45309',
+  },
+  concessionText: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#78350f',
+  },
+
+  evidenceBlock: {
+    gap: 4,
+    marginTop: 4,
+  },
+  evidenceLabel: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 9,
+    letterSpacing: 1,
+    color: Colors.OUTLINE,
+  },
+  evidenceRow: {
+    flexDirection: 'row',
+    gap: 6,
+    alignItems: 'flex-start',
+  },
+  evidenceDot: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    color: Colors.OUTLINE,
+    lineHeight: 18,
+  },
+  evidenceText: {
+    flex: 1,
+    fontFamily: 'Inter_400Regular',
+    fontSize: 11,
+    lineHeight: 17,
+    color: Colors.OUTLINE,
   },
 });

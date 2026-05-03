@@ -29,6 +29,15 @@ export type ShortScript = {
   voice: string;
 };
 
+export type DebateRound = {
+  round_number: number;
+  speaker: 'red' | 'blue';
+  argument: string;
+  key_claim: string;
+  concession: string | null;
+  evidence_cited: string[];
+};
+
 export type TopicDetail = Topic & {
   briefing: {
     origin: string;
@@ -76,4 +85,7 @@ export const api = {
 
   getVoteDistribution: (id: string) =>
     apiFetch<VoteDistribution>(`/votes/${id}/distribution`),
+
+  getDebateRounds: (id: string) =>
+    apiFetch<DebateRound[]>(`/topics/${id}/rounds`),
 };

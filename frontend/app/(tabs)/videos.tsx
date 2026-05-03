@@ -239,9 +239,9 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.SURFACE_CONTAINER_LOW,
   },
   wordmark: {
-    fontFamily: 'Newsreader_600SemiBold',
-    fontSize: 20,
-    color: Colors.PRIMARY,
+    fontFamily: 'PlayfairDisplay_700Bold_Italic',
+    fontSize: 27,
+    color: Colors.ON_SURFACE,
     letterSpacing: -0.3,
   },
   headerIcon: { padding: 4 },

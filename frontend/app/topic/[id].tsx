@@ -13,12 +13,24 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { isAllWatched } from '../../src/services/watchStore';
 import { Colors } from '../../src/theme/colors';
-import VeracityBadge from '../../src/components/VeracityBadge';
 import ProgressBar from '../../src/components/ProgressBar';
 import SpectrumChart from '../../src/components/SpectrumChart';
 import { api, TopicDetail, VoteDistribution } from '../../src/services/api';
 
-const EMPTY_HISTOGRAM = Array(20).fill(0);
+const EMPTY_HISTOGRAM = Array(10).fill(0);
+
+function downsample(hist: number[], bins: number): number[] {
+  const factor = hist.length / bins;
+  return Array.from({ length: bins }, (_, i) => {
+    const start = Math.floor(i * factor);
+    const end = Math.floor((i + 1) * factor);
+    return hist.slice(start, end).reduce((a, b) => a + b, 0);
+  });
+}
+const VOTE_RED = '#b05050';
+const VOTE_BLUE = '#4060b0';
+const VOTE_RED_LIGHT = '#f2dede';
+const VOTE_BLUE_LIGHT = '#dae0f2';
 
 const PART_LABELS = [
   'Origin',
@@ -29,16 +41,6 @@ const PART_LABELS = [
   'Where We Stand',
 ];
 
-function ActionRow({ icon, label, onPress }: { icon: any; label: string; onPress: () => void }) {
-  return (
-    <TouchableOpacity style={styles.actionRow} activeOpacity={0.7} onPress={onPress}>
-      <MaterialCommunityIcons name={icon} size={18} color={Colors.PRIMARY} />
-      <Text style={styles.actionLabel}>{label}</Text>
-      <View style={{ flex: 1 }} />
-      <MaterialCommunityIcons name="chevron-right" size={18} color={Colors.OUTLINE} />
-    </TouchableOpacity>
-  );
-}
 
 export default function TopicDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -50,6 +52,10 @@ export default function TopicDetailScreen() {
   const [votePosition, setVotePosition] = useState<number | null>(null);
   const [voting, setVoting] = useState(false);
   const [allWatched, setAllWatched] = useState(false);
+  const [debateExpanded, setDebateExpanded] = useState(false);
+  const [sideAExpanded, setSideAExpanded] = useState(false);
+  const [sideBExpanded, setSideBExpanded] = useState(false);
+  const [researchExpanded, setResearchExpanded] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -116,7 +122,7 @@ export default function TopicDetailScreen() {
     );
   }
 
-  const histogram = distribution?.histogram ?? EMPTY_HISTOGRAM;
+  const histogram = downsample(distribution?.histogram ?? EMPTY_HISTOGRAM, 10);
   const total = distribution?.total ?? 0;
   const mean = distribution?.mean ?? null;
 
@@ -138,13 +144,6 @@ export default function TopicDetailScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.badgeRow}>
-          <VeracityBadge label="Veracity Confirmed" />
-          {topic.briefing && (
-            <Text style={styles.category}>• Debate Analysis</Text>
-          )}
-        </View>
-
         <Text style={styles.topicTitle}>{topic.topic}</Text>
 
         {/* Bento: vote count + total */}
@@ -152,20 +151,21 @@ export default function TopicDetailScreen() {
           <View style={[styles.card, styles.cardPrimary]}>
             <Text style={styles.bigNumber}>{total.toLocaleString()}</Text>
             <Text style={styles.bigNumberLabel}>votes cast</Text>
-            {mean !== null && (
-              <Text style={styles.bigNumberMeta}>
-                Mean position: {(mean * 100).toFixed(0)}% toward {topic.pole_b}
-              </Text>
-            )}
           </View>
           <View style={[styles.card, styles.cardSecondary]}>
-            <Text style={styles.totalLabel}>Your Vote</Text>
-            {votePosition !== null ? (
-              <Text style={styles.totalNumber}>
-                {(votePosition * 100).toFixed(0)}%
+            <Text style={styles.totalLabel}>Consensus</Text>
+            {mean === null || total === 0 ? (
+              <Text style={styles.voteHint}>No votes yet</Text>
+            ) : mean < 0.45 ? (
+              <Text style={[styles.consensusLabel, { color: VOTE_RED }]} numberOfLines={5}>
+                {topic.pole_a}
+              </Text>
+            ) : mean > 0.55 ? (
+              <Text style={[styles.consensusLabel, { color: VOTE_BLUE }]} numberOfLines={5}>
+                {topic.pole_b}
               </Text>
             ) : (
-              <Text style={styles.voteHint}>Tap spectrum below</Text>
+              <Text style={[styles.consensusLabel, { color: Colors.OUTLINE }]}>Split</Text>
             )}
           </View>
         </View>
@@ -197,23 +197,24 @@ export default function TopicDetailScreen() {
               poleA={topic.pole_a}
               poleB={topic.pole_b}
             />
-            <View style={styles.voteRow}>
-              <Text style={styles.poleLabel} numberOfLines={1}>{topic.pole_a}</Text>
-              <View style={styles.voteSliderTrack}>
-                {Array.from({ length: 10 }, (_, i) => {
-                  const position = (i + 0.5) / 10;
-                  const isSelected = votePosition !== null && Math.abs(votePosition - position) < 0.06;
-                  return (
-                    <Pressable
-                      key={i}
-                      style={[styles.voteSegment, isSelected && styles.voteSegmentSelected]}
-                      onPress={() => castVote(position)}
-                      disabled={voting}
-                    />
-                  );
-                })}
-              </View>
-              <Text style={styles.poleLabel} numberOfLines={1}>{topic.pole_b}</Text>
+            <View style={styles.voteSliderTrack}>
+              {Array.from({ length: 10 }, (_, i) => {
+                const position = (i + 0.5) / 10;
+                const isSelected = votePosition !== null && Math.abs(votePosition - position) < 0.06;
+                const isRed = i < 5;
+                return (
+                  <Pressable
+                    key={i}
+                    style={[
+                      styles.voteSegment,
+                      { backgroundColor: isRed ? VOTE_RED_LIGHT : VOTE_BLUE_LIGHT },
+                      isSelected && { backgroundColor: isRed ? VOTE_RED : VOTE_BLUE },
+                    ]}
+                    onPress={() => castVote(position)}
+                    disabled={voting}
+                  />
+                );
+              })}
             </View>
             {voting && <ActivityIndicator color={Colors.PRIMARY} style={{ marginTop: 8 }} />}
           </View>
@@ -235,43 +236,114 @@ export default function TopicDetailScreen() {
           </View>
         )}
 
-        {/* Briefing summary */}
-        {topic.briefing && (
-          <View style={styles.editorialCard}>
-            <Text style={styles.editorialTag}>Research Summary</Text>
-            <Text style={styles.editorialQuote}>{topic.briefing.current_state}</Text>
-          </View>
-        )}
-
         {/* Debate summary */}
         {topic.debate_summary && (
           <View style={styles.card}>
-            <Text style={[styles.sectionTitle, { marginBottom: 12 }]}>Debate Summary</Text>
-            <Text style={styles.sideLabel}>{topic.pole_a}</Text>
-            {topic.debate_summary.side_a_points.map((pt, i) => (
-              <Text key={i} style={styles.bulletPoint}>• {pt}</Text>
-            ))}
-            <View style={styles.actionDivider} />
-            <Text style={styles.sideLabel}>{topic.pole_b}</Text>
-            {topic.debate_summary.side_b_points.map((pt, i) => (
-              <Text key={i} style={styles.bulletPoint}>• {pt}</Text>
-            ))}
+            <TouchableOpacity
+              style={styles.collapsibleHeader}
+              activeOpacity={0.7}
+              onPress={() => setDebateExpanded((v) => !v)}
+            >
+              <Text style={styles.sectionTitle}>Debate Summary</Text>
+              <MaterialCommunityIcons
+                name={debateExpanded ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color={Colors.OUTLINE}
+              />
+            </TouchableOpacity>
+            {debateExpanded && (
+              <View style={styles.collapsibleBody}>
+                <TouchableOpacity
+                  style={styles.sideLabelRow}
+                  activeOpacity={0.7}
+                  onPress={() => setSideAExpanded((v) => !v)}
+                >
+                  <Text style={[styles.sideLabel, { color: VOTE_RED }]}>{topic.pole_a}</Text>
+                  <MaterialCommunityIcons
+                    name={sideAExpanded ? 'chevron-up' : 'chevron-down'}
+                    size={16}
+                    color={VOTE_RED}
+                  />
+                </TouchableOpacity>
+                {sideAExpanded && (
+                  <View style={styles.bulletBlock}>
+                    {topic.debate_summary.side_a_points.map((pt, i) => (
+                      <View key={i} style={styles.bulletRow}>
+                        <Text style={styles.bulletDot}>•</Text>
+                        <Text style={styles.bulletPoint}>{pt}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+                <View style={styles.actionDivider} />
+                <TouchableOpacity
+                  style={styles.sideLabelRow}
+                  activeOpacity={0.7}
+                  onPress={() => setSideBExpanded((v) => !v)}
+                >
+                  <Text style={[styles.sideLabel, { color: VOTE_BLUE }]}>{topic.pole_b}</Text>
+                  <MaterialCommunityIcons
+                    name={sideBExpanded ? 'chevron-up' : 'chevron-down'}
+                    size={16}
+                    color={VOTE_BLUE}
+                  />
+                </TouchableOpacity>
+                {sideBExpanded && (
+                  <View style={styles.bulletBlock}>
+                    {topic.debate_summary.side_b_points.map((pt, i) => (
+                      <View key={i} style={styles.bulletRow}>
+                        <Text style={styles.bulletDot}>•</Text>
+                        <Text style={styles.bulletPoint}>{pt}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            )}
           </View>
         )}
 
-        {/* Action rows */}
-        <View style={styles.actionsCard}>
-          <ActionRow
-            icon="play-circle"
-            label="Watch Full Series"
+        {/* Research summary */}
+        {topic.briefing && (
+          <View style={styles.editorialCard}>
+            <TouchableOpacity
+              style={styles.collapsibleHeader}
+              activeOpacity={0.7}
+              onPress={() => setResearchExpanded((v) => !v)}
+            >
+              <Text style={styles.editorialTag}>Research Summary</Text>
+              <MaterialCommunityIcons
+                name={researchExpanded ? 'chevron-up' : 'chevron-down'}
+                size={18}
+                color={Colors.OUTLINE}
+              />
+            </TouchableOpacity>
+            {researchExpanded && (
+              <Text style={[styles.editorialQuote, { marginTop: 10 }]}>
+                {topic.briefing.current_state}
+              </Text>
+            )}
+          </View>
+        )}
+
+        {/* Action tiles */}
+        <View style={styles.actionTileRow}>
+          <TouchableOpacity
+            style={[styles.actionTile, { backgroundColor: Colors.PRIMARY }]}
+            activeOpacity={0.85}
             onPress={() => router.push(`/series/${id}`)}
-          />
-          <View style={styles.actionDivider} />
-          <ActionRow
-            icon="flask-outline"
-            label="View Research"
+          >
+            <MaterialCommunityIcons name="play-circle" size={32} color={Colors.ON_PRIMARY} />
+            <Text style={[styles.actionTileLabel, { color: Colors.ON_PRIMARY }]}>Watch{'\n'}Full Series</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionTile, { backgroundColor: Colors.SURFACE_CONTAINER_LOWEST, borderWidth: 1, borderColor: Colors.SURFACE_CONTAINER_HIGH }]}
+            activeOpacity={0.85}
             onPress={() => router.push(`/deep-dive/${id}`)}
-          />
+          >
+            <MaterialCommunityIcons name="flask-outline" size={32} color={Colors.PRIMARY} />
+            <Text style={[styles.actionTileLabel, { color: Colors.ON_SURFACE }]}>View{'\n'}Deep Dive</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -291,9 +363,9 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.SURFACE_CONTAINER_LOW,
   },
   wordmark: {
-    fontFamily: 'Newsreader_600SemiBold',
-    fontSize: 20,
-    color: Colors.PRIMARY,
+    fontFamily: 'PlayfairDisplay_700Bold_Italic',
+    fontSize: 27,
+    color: Colors.ON_SURFACE,
     letterSpacing: -0.3,
   },
   backBtn: { padding: 4 },
@@ -340,16 +412,16 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 1,
   },
-  cardPrimary: { flex: 2 },
+  cardPrimary: { width: 120, aspectRatio: 1 },
   cardSecondary: { flex: 1, backgroundColor: Colors.SURFACE_CONTAINER_LOW },
   cardFull: { gap: 16 },
 
   bigNumber: {
     fontFamily: 'Newsreader_600SemiBold',
-    fontSize: 40,
-    lineHeight: 44,
-    color: Colors.PRIMARY,
-    letterSpacing: -1,
+    fontSize: 30,
+    lineHeight: 34,
+    color: Colors.ON_SURFACE,
+    letterSpacing: -0.5,
   },
   bigNumberLabel: {
     fontFamily: 'Newsreader_500Medium',
@@ -358,13 +430,6 @@ const styles = StyleSheet.create({
     color: Colors.ON_SURFACE,
     marginTop: 4,
   },
-  bigNumberMeta: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 11,
-    lineHeight: 16,
-    color: Colors.OUTLINE,
-    marginTop: 8,
-  },
   totalLabel: {
     fontFamily: 'Inter_500Medium',
     fontSize: 9,
@@ -372,12 +437,10 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: Colors.OUTLINE,
   },
-  totalNumber: {
+  consensusLabel: {
     fontFamily: 'Newsreader_600SemiBold',
-    fontSize: 28,
-    lineHeight: 34,
-    color: Colors.ON_SURFACE,
-    letterSpacing: -0.5,
+    fontSize: 15,
+    lineHeight: 21,
     marginTop: 4,
   },
   voteHint: {
@@ -391,7 +454,7 @@ const styles = StyleSheet.create({
   spectrumHeader: { gap: 12 },
   sectionTitle: {
     fontFamily: 'Newsreader_600SemiBold',
-    fontSize: 18,
+    fontSize: 20,
     color: Colors.ON_SURFACE,
   },
   sectionSubtitle: {
@@ -416,27 +479,27 @@ const styles = StyleSheet.create({
     color: Colors.OUTLINE,
   },
 
-  voteRow: {
+  poleLabelRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
+    gap: 12,
     marginTop: 4,
+    marginBottom: 8,
   },
   poleLabel: {
-    fontFamily: 'Inter_500Medium',
+    flex: 1,
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 10,
-    color: Colors.ON_SURFACE,
-    maxWidth: 60,
+    lineHeight: 14,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
   },
   voteSliderTrack: {
-    flex: 1,
     flexDirection: 'row',
-    height: 36,
-    borderRadius: 8,
+    height: 28,
+    borderRadius: 4,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: Colors.SURFACE_CONTAINER_HIGH,
-    gap: 1,
+    gap: 2,
   },
   voteSegment: {
     flex: 1,
@@ -491,11 +554,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   editorialTag: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 10,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    color: Colors.PRIMARY,
+    fontFamily: 'Newsreader_600SemiBold',
+    fontSize: 20,
+    color: Colors.ON_SURFACE,
   },
   editorialQuote: {
     fontFamily: 'Newsreader_400Regular',
@@ -505,44 +566,82 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
 
+  collapsibleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  collapsibleBody: {
+    marginTop: 12,
+    gap: 0,
+  },
+
+  sideLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+  },
   sideLabel: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 11,
+    fontSize: 13,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
     color: Colors.PRIMARY,
-    marginBottom: 6,
+    flex: 1,
+    marginRight: 8,
+  },
+  bulletBlock: {
+    marginLeft: 16,
+    marginBottom: 4,
+    gap: 6,
+  },
+  bulletRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  bulletDot: {
+    fontFamily: 'Newsreader_400Regular',
+    fontSize: 14,
+    lineHeight: 22,
+    color: Colors.OUTLINE,
   },
   bulletPoint: {
+    flex: 1,
     fontFamily: 'Newsreader_400Regular',
     fontSize: 14,
     lineHeight: 22,
     color: Colors.ON_SURFACE_VARIANT,
-    marginBottom: 4,
   },
 
-  actionsCard: {
-    backgroundColor: Colors.SURFACE_CONTAINER_LOWEST,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.SURFACE_CONTAINER_HIGH,
-    overflow: 'hidden',
-  },
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  actionLabel: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 13,
-    color: Colors.ON_SURFACE,
-  },
   actionDivider: {
     height: 1,
     backgroundColor: Colors.SURFACE_CONTAINER_LOW,
-    marginHorizontal: 20,
+  },
+  actionTileRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  actionTile: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  actionTileLabel: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+    letterSpacing: 0.1,
   },
 });
