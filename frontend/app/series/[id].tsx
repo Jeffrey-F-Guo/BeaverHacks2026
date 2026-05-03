@@ -94,7 +94,7 @@ function PartItem({ item, active, height, onDeepDive }: PartItemProps) {
       </View>
 
       {/* Deep Dive CTA */}
-      <View pointerEvents="box-none" style={[styles.ctaContainer, { bottom: insets.bottom + 16 }]}>
+      {/* <View pointerEvents="box-none" style={[styles.ctaContainer, { bottom: insets.bottom + 16 }]}>
         <Pressable
           style={({ pressed }) => [styles.deepDiveBtn, pressed && { opacity: 0.85 }]}
           onPress={onDeepDive}
@@ -102,7 +102,7 @@ function PartItem({ item, active, height, onDeepDive }: PartItemProps) {
           <MaterialCommunityIcons name="flask-outline" size={18} color={Colors.ON_SURFACE} />
           <Text style={styles.deepDiveText}>Deep Dive</Text>
         </Pressable>
-      </View>
+      </View> */}
 
       {/* Pause indicator */}
       {paused && (

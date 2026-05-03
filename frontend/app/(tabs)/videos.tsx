@@ -104,7 +104,7 @@ export default function VideosScreen() {
       </View>
       <ProgressBar percent={videoReady ? 100 : audioReady ? 80 : scriptsReady ? 50 : 20} />
 
-      {loading ? (
+      {loading ? ( 
         <View style={styles.loader}>
           <ActivityIndicator color={Colors.PRIMARY} size="large" />
         </View>
