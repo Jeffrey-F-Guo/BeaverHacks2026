@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { api, Topic } from '../../src/services/api';
 import { Colors } from '../../src/theme/colors';
 
@@ -62,9 +62,10 @@ type ReelItemProps = {
   item: Reel;
   active: boolean;
   height: number;
+  screenFocused: boolean;
 };
 
-function ReelItem({ item, active, height }: ReelItemProps) {
+function ReelItem({ item, active, height, screenFocused }: ReelItemProps) {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const [paused, setPaused] = useState(false);
@@ -77,12 +78,12 @@ function ReelItem({ item, active, height }: ReelItemProps) {
   });
 
   useEffect(() => {
-    if (active && !paused) {
+    if (active && !paused && screenFocused) {
       player.play();
     } else {
       player.pause();
     }
-  }, [active, paused, player]);
+  }, [active, paused, screenFocused, player]);
 
   useEffect(() => {
     if (!active) return;
@@ -184,6 +185,14 @@ export default function ForYouScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [reels, setReels] = useState<Reel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [screenFocused, setScreenFocused] = useState(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      setScreenFocused(true);
+      return () => setScreenFocused(false);
+    }, [])
+  );
 
   useEffect(() => {
     api.getTopics().then((topics) => {
@@ -214,6 +223,7 @@ export default function ForYouScreen() {
       item={item}
       active={index === currentIndex}
       height={containerHeight}
+      screenFocused={screenFocused}
     />
   );
 

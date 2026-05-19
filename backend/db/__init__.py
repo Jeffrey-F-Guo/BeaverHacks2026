@@ -1,2 +1,2 @@
-# Database utilities for the GroundTruth backend.
+# Database utilities for the Verdict backend.
 # Provides a singleton Supabase client (service role) and storage helpers.

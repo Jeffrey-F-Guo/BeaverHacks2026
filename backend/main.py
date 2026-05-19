@@ -1,4 +1,4 @@
-"""FastAPI surface over the GroundTruth pipeline.
+"""FastAPI surface over the Verdict pipeline.
 
 The actual pipeline runs as a background task triggered by a Supabase webhook
 (`POST /pipeline/start`); these top-level routes are just a liveness check
@@ -19,7 +19,7 @@ from routes.pipeline import router as pipeline_router
 from routes.topics import router as topics_router
 from routes.votes import router as votes_router
 
-app = FastAPI(title="GroundTruth backend")
+app = FastAPI(title="Verdict backend")
 
 # Allow all origins so the frontend (file:// or any port) can call the API.
 app.add_middleware(
