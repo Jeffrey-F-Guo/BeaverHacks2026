@@ -1,8 +1,8 @@
-# GroundTruth — Backend Architecture
+# Verdict — Backend Architecture
 
-## What Is GroundTruth
+## What Is Verdict
 
-GroundTruth is a short-form video platform for contested social issues. Each topic is a debate between two positions (Pole A vs. Pole B). A user lands on a topic, watches a series of short videos that present the research, then casts a spectrum vote (0.0 = fully Pole A, 1.0 = fully Pole B).
+Verdict is a short-form video platform for contested social issues. Each topic is a debate between two positions (Pole A vs. Pole B). A user lands on a topic, watches a series of short videos that present the research, then casts a spectrum vote (0.0 = fully Pole A, 1.0 = fully Pole B).
 
 The backend's job is to fully automate all content production for a topic after it is created. No human writes scripts, records audio, or edits video. Given a topic string and two poles, the backend produces six ~30-second videos ready for a mobile feed.
 

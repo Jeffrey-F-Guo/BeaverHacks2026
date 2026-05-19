@@ -1,4 +1,4 @@
-# GroundTruth backend
+# Verdict backend
 
 Python pipeline that turns a contested-topic seed (a row in `topics`) into 6 vertical-reel MP4s, end-to-end on Google's Gemini stack, with state and assets persisted to Supabase.
 
