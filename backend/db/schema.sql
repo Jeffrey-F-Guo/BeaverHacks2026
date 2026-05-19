@@ -1,5 +1,5 @@
 -- =====================================================================
--- GroundTruth schema. Run in Supabase SQL editor.
+-- Verdict schema. Run in Supabase SQL editor.
 -- Idempotent: re-running on an existing DB is safe.
 -- =====================================================================
 
